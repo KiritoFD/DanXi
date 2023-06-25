@@ -29,7 +29,7 @@ dependencies:
   provider: ^6.0.5
   event_bus: ^2.0.0
   flutter_platform_widgets: ^3.0.0
-  share_plus: ^6.3.1
+  share_plus: ^7.0.2
   path_provider: ^2.0.9
   screen_brightness: ^0.2.1
   flutter_email_sender: ^5.1.0
