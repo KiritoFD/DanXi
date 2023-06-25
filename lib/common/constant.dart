@@ -18,9 +18,12 @@
 import 'dart:io' show Platform;
 import 'dart:math';
 
+import 'package:dan_xi/common/feature_registers.dart';
 import 'package:dan_xi/common/pubspec.yaml.g.dart' as pubspec;
+import 'package:dan_xi/feature/feature_map.dart';
 import 'package:dan_xi/generated/l10n.dart';
 import 'package:dan_xi/model/dashboard_card.dart';
+import 'package:dan_xi/page/dashboard/dashboard_reorder.dart';
 import 'package:dan_xi/page/opentreehole/hole_editor.dart';
 import 'package:dan_xi/page/subpage_settings.dart';
 import 'package:dan_xi/provider/settings_provider.dart';
@@ -32,15 +35,27 @@ import 'package:event_bus/event_bus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Store some important constants, like app id, default color styles, etc.
+/// Store some important constants, such as app id, default color styles, etc.
 class Constant {
   /// The number of posts on each pages returned from the server of FDUHole.
   static const POST_COUNT_PER_PAGE = 10;
 
   static const SUPPORT_QQ_GROUP = "941342818";
 
+  /// The division name of the curriculum page. We use this to determine whether
+  /// we should show the curriculum page (instead of a normal treehole division).
+  ///
+  /// See also:
+  ///
+  /// * [ListDelegate], which determines the page content per division.
+  /// * [PostsType], which can represent a special division.
+  /// * [OTDivision], whose name is what we compare with.
   static const SPECIAL_DIVISION_FOR_CURRICULUM = "评教";
 
+  /// The default user agent used by the app.
+  ///
+  /// Note that this is not the same as the user agent used by the WebView, or the
+  /// treehole's [Dio]. Those two are set by WebView and [OpenTreeHoleRepository].
   static String get DEFAULT_USER_AGENT =>
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36";
 
@@ -51,9 +66,9 @@ class Constant {
       "https://auth.fduhole.com/register?type=forget_password";
 
   /// The default start date of a semester.
-  // ignore: non_constant_identifier_names
-  static final DEFAULT_SEMESTER_START_DATE = DateTime(2022, 2, 21);
+  static final DEFAULT_SEMESTER_START_DATE = DateTime(2023, 2, 20);
 
+  /// A global queue to send events across the widget tree.
   static EventBus eventBus = EventBus(sync: true);
   static const String UIS_URL = "https://uis.fudan.edu.cn/authserver/login";
   static const String UIS_HOST = "uis.fudan.edu.cn";
@@ -61,21 +76,30 @@ class Constant {
   static const LINKIFY_THEME =
       TextStyle(color: Colors.blue, decoration: TextDecoration.none);
 
-  // Client version descriptor
+  /// Client version descriptor.
+  ///
+  /// It is used to identify the client in the HTTP request header.
+  /// Currently, it is used in the [OpenTreeHoleRepository] to tell the server
+  /// about the client version.
   static String get version =>
       "DanXi/${FlutterApp.versionName}b${pubspec.build.single} (${Platform.operatingSystem}; ${Platform.operatingSystemVersion})";
 
+  /// The tips to be shown as hints in the [BBSEditorWidget].
   static List<String> fduHoleTips = [];
 
-  /// Load in the tips to be shown in the [BBSEditorWidget].
+  /// Load in the tips in the [BBSEditorWidget].
   static Future<List<String>> _loadTips() async {
     String tipLines = await rootBundle.loadString("assets/texts/tips.dat");
     return tipLines.split("\n");
   }
 
+  /// The stop words to be determined in the [BBSEditorWidget].
+  ///
+  /// Stop words are used to warn the user when he/she is about to post
+  /// something that is not encouraged by the treehole community.
   static List<String> _stopWords = [];
 
-  /// Load in the stop words to be shown in the [BBSEditorWidget].
+  /// Load in the stop words in the [BBSEditorWidget].
   static Future<List<String>> _loadStopWords() async {
     String wordLines =
         await rootBundle.loadString("assets/texts/stop_words.dat");
@@ -120,36 +144,48 @@ class Constant {
     }
   }
 
-  /// Get i18n names of all features.
+  /// The keys of special cards that are not features, but can be added to the dashboard.
   ///
-  /// For any feature newly added, its representation name should be added here.
-  static Map<String, String> getFeatureName(BuildContext context) => {
-        'welcome_feature': S.of(context).welcome_feature,
-        'next_course_feature': S.of(context).today_course,
-        'divider': S.of(context).divider,
-        'ecard_balance_feature': S.of(context).ecard_balance,
-        'dining_hall_crowdedness_feature':
-            S.of(context).dining_hall_crowdedness,
-        'fudan_library_crowdedness_feature':
-            S.of(context).fudan_library_crowdedness,
-        'aao_notice_feature': S.of(context).fudan_aao_notices,
-        'empty_classroom_feature': S.of(context).empty_classrooms,
-        // 'fudan_daily_feature': S.of(context).fudan_daily,
-        'new_card': S.of(context).add_new_card,
-        'qr_feature': S.of(context).fudan_qr_code,
-        'pe_feature': S.of(context).pe_exercises,
-        'bus_feature': S.of(context).bus_query,
-        'dorm_electricity_feature': S.of(context).dorm_electricity,
-      };
+  /// See also:
+  /// - [DashboardCard]
+  /// - [registerFeature]
+
+  /// A divider.
+  static const FEATURE_DIVIDER = "divider";
+
+  /// Not a displayable feature, but indicates the start of a new card.
+  /// i.e. the content below this feature will be shown in a new card.
+  static const FEATURE_NEW_CARD = "new_card";
+
+  /// A custom card, allowing user to tap to jump to a web location.
+  static const FEATURE_CUSTOM_CARD = "custom_card";
+
+  /// Get i18n names of all features (included special cards, e.g. "divider" or "new_card")
+  /// by their representation names.
+  /// This is used to display the name of a feature in the settings page.
+  ///
+  /// See also:
+  /// - [DashboardReorderPage]
+  /// - [FeatureMap]
+  static Map<String, String> getFeatureName(BuildContext context) {
+    Map<String, String> names =
+        featureDisplayName.map((key, value) => MapEntry(key, value(context)));
+
+    names.addAll({
+      FEATURE_NEW_CARD: S.of(context).add_new_card,
+      FEATURE_DIVIDER: S.of(context).divider,
+    });
+    return names;
+  }
 
   /// A default dashboard card list to be shown on the initial startup.
   ///
-  /// It will be overwritten by data stored with key [SettingsProvider.KEY_DASHBOARD_WIDGETS]
+  /// It will be overwritten by data stored with key [SettingsProvider.KEY_DASHBOARD_WIDGETS].
   static List<DashboardCard> defaultDashboardCardList = [
-    DashboardCard("new_card", null, null, true),
+    DashboardCard(FEATURE_NEW_CARD, null, null, true),
     DashboardCard("welcome_feature", null, null, true),
     DashboardCard("next_course_feature", null, null, true),
-    DashboardCard("divider", null, null, true),
+    DashboardCard(FEATURE_DIVIDER, null, null, true),
     DashboardCard("ecard_balance_feature", null, null, true),
     DashboardCard("dining_hall_crowdedness_feature", null, null, true),
     DashboardCard("fudan_library_crowdedness_feature", null, null, true),
@@ -158,9 +194,7 @@ class Constant {
     DashboardCard("dorm_electricity_feature", null, null, true),
     DashboardCard("bus_feature", null, null, true),
     DashboardCard("pe_feature", null, null, true),
-    DashboardCard("new_card", null, null, true),
-    // DashboardCard("fudan_daily_feature", null, null, true),
-    // DashboardCard("new_card", null, null, true),
+    DashboardCard(FEATURE_NEW_CARD, null, null, true),
     DashboardCard("qr_feature", null, null, true),
   ];
 
@@ -212,9 +246,12 @@ class Constant {
 
   /// Get the link to update the application.
   static String updateUrl() {
-    // Don't use GitHub URL, since access is not guaranteed
+    // Don't use GitHub URL, since access is not guaranteed in China.
     if (PlatformX.isIOS) {
       return "https://apps.apple.com/app/id$APPSTORE_APPID";
+    }
+    if (PlatformX.isAndroid) {
+      return "https://static.fduhole.com/danxi-latest.apk";
     }
     return "https://danxi.fduhole.com";
   }
@@ -360,10 +397,6 @@ class Constant {
     'grey'
   ];
 
-  /// Get a random color string from [TAG_COLOR_LIST].
-  static String get randomColor =>
-      TAG_COLOR_LIST[Random().nextInt(TAG_COLOR_LIST.length)];
-
   /// Get the corresponding [Color] from a color string.
   static MaterialColor getColorFromString(String? color) {
     switch (color) {
@@ -460,6 +493,8 @@ class Constant {
   static const WeekDays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 }
 
+enum Language { SIMPLE_CHINESE, ENGLISH, JAPANESE, NONE }
+
 /// A list of Fudan campus.
 enum Campus {
   HANDAN_CAMPUS,
@@ -468,8 +503,6 @@ enum Campus {
   ZHANGJIANG_CAMPUS,
   NONE
 }
-
-enum Language { SIMPLE_CHINESE, ENGLISH, JAPANESE, NONE }
 
 extension CampusEx on Campus? {
   static const _CAMPUS_NAME = ["邯郸", "枫林", "江湾", "张江"];
@@ -505,19 +538,19 @@ extension CampusEx on Campus? {
   }
 
   /// Get the i18n name of this campus for display.
-  String displayTitle(BuildContext? context) {
+  String displayTitle(BuildContext context) {
     switch (this) {
       case Campus.HANDAN_CAMPUS:
-        return S.of(context!).handan_campus;
+        return S.of(context).handan_campus;
       case Campus.FENGLIN_CAMPUS:
-        return S.of(context!).fenglin_campus;
+        return S.of(context).fenglin_campus;
       case Campus.JIANGWAN_CAMPUS:
-        return S.of(context!).jiangwan_campus;
+        return S.of(context).jiangwan_campus;
       case Campus.ZHANGJIANG_CAMPUS:
-        return S.of(context!).zhangjiang_campus;
+        return S.of(context).zhangjiang_campus;
       // Select area when it's none
       case Campus.NONE:
-        return S.of(context!).choose_area;
+        return S.of(context).choose_area;
       case null:
         return "?";
     }

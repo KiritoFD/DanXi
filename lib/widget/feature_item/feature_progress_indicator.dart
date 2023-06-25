@@ -1,5 +1,5 @@
 /*
- *     Copyright (C) 2021  DanXi-Dev
+ *     Copyright (C) 2023  DanXi-Dev
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -15,32 +15,23 @@
  *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:dan_xi/feature/base_feature.dart';
 import 'package:dan_xi/util/platform_universal.dart';
-import 'package:screen_brightness/screen_brightness.dart';
+import 'package:dan_xi/widget/libraries/scale_transform.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 
-/// A proxy class for [ScreenBrightness] to make it work on all platforms.
-class ScreenProxy {
-  static Future<void> init() async {
-    if (PlatformX.isMobile) await ScreenBrightness().setAutoReset(false);
-  }
+/// A slightly smaller version of [CircularProgressIndicator].
+///
+/// It is commonly used in [Feature] to indicate that the feature is loading.
+class FeatureProgressIndicator extends StatelessWidget {
+  const FeatureProgressIndicator({Key? key}) : super(key: key);
 
-  static Future<double?> get brightness async {
-    if (PlatformX.isMobile) {
-      return await ScreenBrightness().current;
-    } else {
-      return 0;
-    }
-  }
-
-  static setBrightness(double brightness) async {
-    if (PlatformX.isMobile) {
-      await ScreenBrightness().setScreenBrightness(brightness);
-    }
-  }
-
-  static resetBrightness() async {
-    if (PlatformX.isMobile) {
-      await ScreenBrightness().resetScreenBrightness();
-    }
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransform(
+      scale: PlatformX.isMaterial(context) ? 0.5 : 1.0,
+      child: PlatformCircularProgressIndicator(),
+    );
   }
 }

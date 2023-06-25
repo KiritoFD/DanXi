@@ -40,7 +40,7 @@
 // ignore_for_file: prefer_single_quotes
 
 /// Current app version
-const String version = r'1.3.11+331';
+const String version = r'1.3.13+335';
 
 /// The major version number: "1" in "1.2.3".
 const int major = 1;
@@ -49,16 +49,16 @@ const int major = 1;
 const int minor = 3;
 
 /// The patch version number: "3" in "1.2.3".
-const int patch = 11;
+const int patch = 13;
 
 /// The pre-release identifier: "foo" in "1.2.3-foo".
 const List<String> pre = <String>[];
 
 /// The build identifier: "foo" in "1.2.3+foo".
-const List<String> build = <String>[r'331'];
+const List<String> build = <String>[r'335'];
 
 /// Build date in Unix Time (in seconds)
-const int timestamp = 1675399857;
+const int timestamp = 1682143130;
 
 /// Name [name]
 const String name = r'dan_xi';
@@ -115,7 +115,7 @@ const Map<String, Object> dependencies = <String, Object>{
   'provider': r'^6.0.5',
   'event_bus': r'^2.0.0',
   'flutter_platform_widgets': r'^3.0.0',
-  'share_plus': r'^4.5.3',
+  'share_plus': r'^6.3.1',
   'path_provider': r'^2.0.9',
   'screen_brightness': r'^0.2.1',
   'flutter_email_sender': r'^5.1.0',
@@ -136,12 +136,21 @@ const Map<String, Object> dependencies = <String, Object>{
   'in_app_review': r'^2.0.4',
   'flutter_linkify': r'^5.0.2',
   'linkify': r'^4.0.0',
-  'open_file': r'^3.2.1',
+  'open_file': <String, Object>{
+    'git': <String, Object>{
+      'url': r'https://github.com/crazecoder/open_file.git',
+    },
+  },
   'dio_log': r'^2.0.2',
   'json_serializable': r'^6.2.0',
   'photo_view': r'^0.14.0',
   'gallery_saver': r'^2.3.2',
-  'flutter_markdown': r'^0.6.10',
+  'flutter_markdown': <String, Object>{
+    'git': <String, Object>{
+      'url':
+          r'https://github.com/singularity-s0/flutter_markdown_selectable.git',
+    },
+  },
   'markdown': r'^6.0.1',
   'system_tray': <String, Object>{
     'git': <String, Object>{
@@ -149,15 +158,15 @@ const Map<String, Object> dependencies = <String, Object>{
       'ref': r'main',
     },
   },
-  'bitsdojo_window': r'^0.1.2',
-  'win32': r'^2.4.1',
-  'file_picker': r'^4.6.1',
+  'bitsdojo_window': r'^0.1.5',
+  'win32': r'^3.1.3',
+  'file_picker': r'^5.2.6',
   'cached_network_image': r'^3.2.1',
   'flutter_typeahead': r'^4.3.3',
   'collection': r'>=1.15.0 <2.0.0',
   'meta': r'>=1.3.0 <2.0.0',
   'flutter_layout_grid': r'^2.0.1',
-  'flutter_js': r'^0.5.0+6',
+  'flutter_js': r'^0.6.0',
   'flutter_math_fork': r'^0.6.2',
   'platform_device_id': r'^1.0.1',
   'uuid': r'^3.0.6',
@@ -166,12 +175,13 @@ const Map<String, Object> dependencies = <String, Object>{
   'lunar': r'^1.2.20',
   'flutter_fgbg': r'^0.2.0',
   'lazy_load_indexed_stack': r'^0.1.3',
-  'js': r'^0.6.4',
+  'js': r'^0.6.5',
   'nil': r'^1.1.1',
   'flex_color_picker': r'^3.1.0',
   'material_color_generator': r'^1.1.0',
   'flutter_swiper_view': r'^1.1.8',
   'mutex': r'^3.0.1',
+  'device_info_plus': r'^8.1.0',
 };
 
 /// Developer dependencies
@@ -186,7 +196,6 @@ const Map<String, Object> devDependencies = <String, Object>{
 
 /// Dependency overrides
 const Map<String, Object> dependencyOverrides = <String, Object>{
-  'device_info_plus': r'^3.2.4',
   'fluttertoast': <String, Object>{
     'git': <String, Object>{
       'url': r'https://github.com/ponnamkarthik/FlutterToast.git',

@@ -199,6 +199,13 @@ class OTHoleWidget extends StatelessWidget {
                                   color: Theme.of(context).colorScheme.primary,
                                   text: S.of(context).hole_hidden,
                                 ),
+                              ],
+                              if (postElement.locked == true) ...[
+                                const SizedBox(width: 4),
+                                OTLeadingTag(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  text: S.of(context).hole_locked,
+                                )
                               ]
                             ],
                           ),
@@ -425,7 +432,18 @@ class OTFloorWidget extends StatelessWidget {
                         color: Colors.red,
                         text: floor.special_tag!,
                       ),
-                    ]
+                    ],
+                    // We will only show the hidden tag if this hole is hidden
+                    // and this floor is the first floor.
+                    if (parentHole?.hidden == true &&
+                        floor.floor_id ==
+                            parentHole?.floors?.first_floor?.floor_id) ...[
+                      const SizedBox(width: 4),
+                      OTLeadingTag(
+                        color: Colors.red,
+                        text: S.of(context).hole_hidden,
+                      ),
+                    ],
                   ],
                 )
               ],

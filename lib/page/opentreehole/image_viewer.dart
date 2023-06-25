@@ -134,10 +134,15 @@ class ImageViewerPageState extends State<ImageViewerPage> {
     File image =
         await DefaultCacheManager().getSingleFile(_imageList[showIndex].hdUrl);
     if (PlatformX.isMobile) {
-      Share.shareXFiles([
-        XFile(image.absolute.path,
-            mimeType: ImageViewerPage.getMineType(_imageList[showIndex].hdUrl))
-      ]);
+      final box = context.findRenderObject() as RenderBox?;
+      Share.shareXFiles(
+        [
+          XFile(image.absolute.path,
+              mimeType:
+                  ImageViewerPage.getMineType(_imageList[showIndex].hdUrl))
+        ],
+        sharePositionOrigin: box!.localToGlobal(Offset.zero) & box.size,
+      );
     } else if (context.mounted) {
       Noticing.showNotice(context, image.absolute.path);
     }
@@ -154,9 +159,8 @@ class ImageViewerPageState extends State<ImageViewerPage> {
     File image =
         await DefaultCacheManager().getSingleFile(_imageList[showIndex].hdUrl);
     if (PlatformX.isAndroid) {
-      PermissionStatus status = await Permission.storage.status;
-      if (!status.isGranted &&
-          !(await Permission.storage.request().isGranted)) {
+      bool hasPermission = await PlatformX.galleryStorageGranted;
+      if (!hasPermission && !(await Permission.storage.request().isGranted)) {
         // Failed to request the permission
         return;
       }

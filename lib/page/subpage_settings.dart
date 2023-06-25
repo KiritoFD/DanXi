@@ -219,7 +219,7 @@ class SettingsSubpageState extends PlatformSubpageState<SettingsSubpage> {
         "https://github.com/rydmike/flex_color_picker"),
     LicenseItem("material_color_generator", LICENSE_BSD_2_0_CLAUSE,
         "https://github.com/berkanaslan/material-color-generator"),
-    LicenseItem("material_color_generator", LICENSE_MIT,
+    LicenseItem("flutter_swiper_view", LICENSE_MIT,
         "https://github.com/feicien/flutter_swiper_view"),
     LicenseItem(
         "mutex", LICENSE_BSD_3_0_CLAUSE, "https://github.com/hoylen/dart-mutex")
@@ -291,6 +291,22 @@ class SettingsSubpageState extends PlatformSubpageState<SettingsSubpage> {
       list.add(PlatformContextMenuItem(
         menuContext: menuContext,
         child: Text(value.displayTitle(menuContext)),
+        onPressed: () => onTapListener(value),
+      ));
+    }
+    return list;
+  }
+
+  List<Widget> _buildThemeList(BuildContext menuContext) {
+    List<Widget> list = [];
+    onTapListener(ThemeType theme) {
+      SettingsProvider.getInstance().themeType = theme;
+    }
+
+    for (var value in ThemeType.values) {
+      list.add(PlatformContextMenuItem(
+        menuContext: menuContext,
+        child: Text(value.displayTitle(menuContext) ?? "null"),
         onPressed: () => onTapListener(value),
       ));
     }
@@ -441,6 +457,24 @@ class SettingsSubpageState extends PlatformSubpageState<SettingsSubpage> {
                               }
                             },
                           ),
+                        ListTile(
+                          title: Text(S.of(context).theme),
+                          subtitle: Text(context
+                                  .select<SettingsProvider, ThemeType>(
+                                      (s) => s.themeType)
+                                  .displayTitle(context) ??
+                              "null"),
+                          leading: const Icon(Icons.brightness_4),
+                          onTap: () => showPlatformModalSheet(
+                              context: context,
+                              builder: (BuildContext context) =>
+                                  PlatformContextMenu(
+                                      actions: _buildThemeList(context),
+                                      cancelButton: CupertinoActionSheetAction(
+                                          child: Text(S.of(context).cancel),
+                                          onPressed: () =>
+                                              Navigator.of(context).pop()))),
+                        ),
                         if (context.select<SettingsProvider, bool>(
                             (value) => value.hiddenNotifications.isNotEmpty))
                           ListTile(
@@ -518,9 +552,9 @@ class SettingsSubpageState extends PlatformSubpageState<SettingsSubpage> {
                                     .visibleWatermarkMode = false;
                               } else {
                                 SettingsProvider.getInstance()
-                                    .lightWatermarkColor = 0x01000000;
+                                    .lightWatermarkColor = 0x04000000;
                                 SettingsProvider.getInstance()
-                                    .darkWatermarkColor = 0x01000000;
+                                    .darkWatermarkColor = 0x0a000000;
                                 SettingsProvider.getInstance()
                                     .visibleWatermarkMode = true;
                               }
@@ -890,8 +924,7 @@ class SettingsSubpageState extends PlatformSubpageState<SettingsSubpage> {
                       Divider(
                         color: originalDividerColor,
                       ),
-                      RichText(
-                          text: TextSpan(children: [
+                      Text.rich(TextSpan(children: [
                         TextSpan(
                           style: defaultText,
                           text: S.of(context).terms_and_conditions_content,
@@ -925,8 +958,7 @@ class SettingsSubpageState extends PlatformSubpageState<SettingsSubpage> {
                         textScaleFactor: 1.1,
                       ),
                       Divider(color: originalDividerColor),
-                      RichText(
-                          text: TextSpan(children: [
+                      Text.rich(TextSpan(children: [
                         TextSpan(
                           style: defaultText,
                           text: S.of(context).acknowledgements_1,
