@@ -68,7 +68,7 @@ class QRDialogState extends State<QRDialog> {
                   return QrImageView(
                       data: snapshot.data!,
                       size: 200.0,
-                      foregroundColor: Colors.black,
+                      // foregroundColor: Colors.black,
                       backgroundColor: Colors.white);
                 },
                 loadingBuilder: Text(S.of(context).loading_qr_code),
