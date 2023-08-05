@@ -108,7 +108,7 @@ class BBSPostDetail extends StatefulWidget {
 
 class BBSPostDetailState extends State<BBSPostDetail> {
   /// Unrelated to the state.
-  /// These field should only be initialized once when created.
+  /// These fields should only be initialized once when created.
   late OTHole _hole;
   String? _searchKeyword;
   FileImage? _backgroundImage;
