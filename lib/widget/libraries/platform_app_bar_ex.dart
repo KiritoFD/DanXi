@@ -105,16 +105,14 @@ class PlatformAppBarX extends PlatformAppBar {
       //backgroundColor: Colors.white.withAlpha(254),
       leading: MediaQuery(
         data: MediaQueryData(
-            textScaler:
-                TextScaler.linear(MediaQuery.textScaleFactorOf(context))),
+            textScaleFactor: MediaQuery.textScaleFactorOf(context)),
         child: CupertinoNavigationBarBackButton(
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       title: MediaQuery(
           data: MediaQueryData(
-              textScaler:
-                  TextScaler.linear(MediaQuery.textScaleFactorOf(context))),
+              textScaleFactor: MediaQuery.textScaleFactorOf(context)),
           child: data?.title ?? title!),
     );
     var trailing = trailingActions?.isEmpty ?? true

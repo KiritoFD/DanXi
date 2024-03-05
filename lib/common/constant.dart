@@ -372,7 +372,7 @@ class Constant {
       );
     }
     return ThemeData(
-      useMaterial3: true,
+      useMaterial3: false,
       colorScheme: ColorScheme.fromSeed(seedColor: color),
       cardTheme: CardTheme(
         elevation: 0.5,
