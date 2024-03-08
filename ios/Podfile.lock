@@ -91,6 +91,8 @@ PODS:
   - shared_preferences_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
+  - smooth (0.0.1):
+    - Flutter
   - sqflite (0.0.3):
     - Flutter
     - FlutterMacOS
@@ -126,6 +128,7 @@ DEPENDENCIES:
   - screen_capture_event (from `.symlinks/plugins/screen_capture_event/ios`)
   - share_plus (from `.symlinks/plugins/share_plus/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
+  - smooth (from `.symlinks/plugins/smooth/ios`)
   - sqflite (from `.symlinks/plugins/sqflite/darwin`)
   - uni_links (from `.symlinks/plugins/uni_links/ios`)
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
@@ -188,6 +191,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/share_plus/ios"
   shared_preferences_foundation:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
+  smooth:
+    :path: ".symlinks/plugins/smooth/ios"
   sqflite:
     :path: ".symlinks/plugins/sqflite/darwin"
   uni_links:
@@ -224,6 +229,7 @@ SPEC CHECKSUMS:
   SDWebImage: 96e0c18ef14010b7485210e92fac888587ebb958
   share_plus: c3fef564749587fc939ef86ffb283ceac0baf9f5
   shared_preferences_foundation: b4c3b4cddf1c21f02770737f147a3f5da9d39695
+  smooth: e601f90cdbc372ff776ace20e20b5df4db606906
   sqflite: 673a0e54cc04b7d6dba8d24fb8095b31c3a99eec
   SwiftyGif: 93a1cc87bf3a51916001cf8f3d63835fb64c819f
   Toast: 91b396c56ee72a5790816f40d3a94dd357abc196
