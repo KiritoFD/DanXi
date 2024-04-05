@@ -51,8 +51,7 @@ import 'package:dan_xi/provider/fduhole_provider.dart';
 import 'package:dan_xi/provider/language_manager.dart';
 import 'package:dan_xi/provider/notification_provider.dart';
 import 'package:dan_xi/provider/settings_provider.dart';
-import 'package:dan_xi/provider/state_provider.dart';
-import 'package:dan_xi/util/lazy_future.dart';
+import 'package:dan_xi/provider/state_provider.dart' as sp;
 import 'package:dan_xi/util/master_detail_view.dart';
 import 'package:dan_xi/util/platform_universal.dart';
 import 'package:dan_xi/util/screen_proxy.dart';
@@ -66,24 +65,39 @@ import 'package:flutter_fgbg/flutter_fgbg.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_color_generator/material_color_generator.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider;
 import 'package:xiao_mi_push_plugin/xiao_mi_push_plugin.dart';
 
 import 'common/constant.dart';
 
 /// The main entry of the whole app.
 /// Do some initial work here.
-void main() {
+Future<void> main() async {
   // Ensure that the engine has bound itself to
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Init Mi push Service.
-  if (PlatformX.isAndroid) {
-    XiaoMiPushPlugin.init(
-        appId: "2882303761519940685", appKey: "5821994071685");
-  }
+  unawaited(earlyUnawaitedInit().catchError((e, s) {
+    print("Error in earlyUnawaitedInit: $e\n$s");
+  }));
+  await earlyInit();
 
+  // This is the entrypoint of a simple Flutter app.
+  // runApp() is a function that takes a [Widget] and makes it the root
+  // of the widget tree.
+  runApp(const ProviderScope(child: DanxiApp()));
+
+  // Init DesktopWindow on desktop environment.
+  if (PlatformX.isDesktop) {
+    doWhenWindowReady(() => appWindow.show());
+  }
+}
+
+// Some init work that has to be done before the app starts.
+//
+// Note: keep this function as quick as possible.
+Future<void> earlyInit() async {
   // Init Feature registration.
   //
   // Feature map is a map that contains all the features in the home screen.
@@ -96,34 +110,28 @@ void main() {
   // comments which would be helpful for you to get started.
   FeatureMap.registerAllFeatures();
 
-  // Init ScreenProxy. It is a proxy class for [ScreenBrightness] to make it
-  // work on all platforms.
-  // We need to adjust the screen brightness when showing tht Fudan QR Code.
-  unawaited(LazyFuture.pack(ScreenProxy.init()));
-
   // Init SettingsProvider. SettingsProvider is a singleton class that stores
   // all the settings of the app.
-  SettingsProvider.getInstance().init().then((_) {
-    SettingsProvider.getInstance().isTagSuggestionAvailable().then((value) {
-      SettingsProvider.getInstance().tagSuggestionAvailable = value;
-      final registerDeviceIdentity =
-          PlatformX.isAndroid ? DeviceIdentity.register() : Future.value();
-      registerDeviceIdentity.then((_) {
-        // This is the entrypoint of a simple Flutter app.
-        // runApp() is a function that takes a [Widget] and makes it the root
-        // of the widget tree.
-        runApp(const DanxiApp());
-      });
-    });
-  });
+  await SettingsProvider.getInstance().init();
 
-  // Init DesktopWindow on desktop environment.
-  if (PlatformX.isDesktop) {
-    doWhenWindowReady(() {
-      final win = appWindow;
-      win.show();
-    });
+  if (PlatformX.isAndroid) {
+    await DeviceIdentity.register();
   }
+}
+
+// Some init work that doesn't need to be awaited.
+Future<void> earlyUnawaitedInit() async {
+  await ScreenProxy.init();
+
+  // Init Mi push Service.
+  if (PlatformX.isAndroid) {
+    await XiaoMiPushPlugin.init(
+        appId: "2882303761519940685", appKey: "5821994071685");
+  }
+
+  // Check if tag suggestion is available.
+  SettingsProvider.getInstance().tagSuggestionAvailable =
+      await SettingsProvider.getInstance().isTagSuggestionAvailable();
 }
 
 class TouchMouseScrollBehavior extends MaterialScrollBehavior {
@@ -187,7 +195,8 @@ class DanxiApp extends StatelessWidget {
     '/text/detail': (context, {arguments}) =>
         TextSelectorPage(arguments: arguments),
     '/exam/gpa': (context, {arguments}) => GpaTablePage(arguments: arguments),
-    '/bus/detail': (context, {arguments}) => BusPage(arguments: arguments),
+    '/bus/detail': (context, {required BusPageArguments arguments}) =>
+        BusPage(arguments: arguments),
     '/bbs/tags/blocklist': (context, {arguments}) =>
         BBSHiddenTagsPreferencePage(arguments: arguments),
     '/bbs/admin': (context, {arguments}) =>
@@ -228,12 +237,12 @@ class DanxiApp extends StatelessWidget {
       // Uncomment this line below to force the app to use Cupertino Widgets.
       // initialPlatform: TargetPlatform.iOS,
 
-      // [DynamicThemeController] enables the app to change between dark/light
-      // theme without restart on iOS.
       builder: (BuildContext context) {
         MaterialColor primarySwatch =
             context.select<SettingsProvider, MaterialColor>((value) =>
                 generateMaterialColor(color: Color(value.primarySwatch_V2)));
+        // [DynamicThemeController] enables the app to change between dark/light
+        // theme without restart on iOS.
         return DynamicThemeController(
           lightTheme: Constant.lightTheme(
               PlatformX.isCupertino(context), primarySwatch),
@@ -241,7 +250,7 @@ class DanxiApp extends StatelessWidget {
               Constant.darkTheme(PlatformX.isCupertino(context), primarySwatch),
           child: Material(
             child: PlatformApp(
-              // Remember? We have just defined this scroll behavior class above
+              // We have just defined this scroll behavior class above
               // to enable scrolling with mouse & stylus.
               scrollBehavior: TouchMouseScrollBehavior(),
               debugShowCheckedModeBanner: false,
@@ -252,6 +261,9 @@ class DanxiApp extends StatelessWidget {
                           .select<SettingsProvider, ThemeType>(
                               (s) => s.themeType)
                           .getBrightness(),
+                      scaffoldBackgroundColor:
+                          PlatformX.getTheme(context, primarySwatch)
+                              .scaffoldBackgroundColor,
                       textTheme: CupertinoTextThemeData(
                           textStyle: TextStyle(
                               color: PlatformX.getTheme(context, primarySwatch)
@@ -303,10 +315,10 @@ class DanxiApp extends StatelessWidget {
           onEvent: (FGBGType value) {
             switch (value) {
               case FGBGType.foreground:
-                StateProvider.isForeground = true;
+                sp.StateProvider.isForeground = true;
                 break;
               case FGBGType.background:
-                StateProvider.isForeground = false;
+                sp.StateProvider.isForeground = false;
                 break;
             }
           },
@@ -327,10 +339,11 @@ class DanxiApp extends StatelessWidget {
     return Phoenix(
       // Wrap the app with a global state management provider. As the name
       // suggests, it groups multiple providers.
-      child: MultiProvider(providers: [
-        ChangeNotifierProvider.value(value: SettingsProvider.getInstance()),
-        ChangeNotifierProvider(create: (_) => NotificationProvider()),
-        ChangeNotifierProvider.value(value: fduHoleProvider)
+      child: provider.MultiProvider(providers: [
+        provider.ChangeNotifierProvider.value(
+            value: SettingsProvider.getInstance()),
+        provider.ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        provider.ChangeNotifierProvider.value(value: fduHoleProvider)
       ], child: mainApp),
     );
   }

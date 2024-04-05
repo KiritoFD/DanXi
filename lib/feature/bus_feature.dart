@@ -19,6 +19,7 @@ import 'package:dan_xi/common/constant.dart';
 import 'package:dan_xi/feature/base_feature.dart';
 import 'package:dan_xi/generated/l10n.dart';
 import 'package:dan_xi/model/person.dart';
+import 'package:dan_xi/page/dashboard/bus.dart';
 import 'package:dan_xi/provider/settings_provider.dart';
 import 'package:dan_xi/provider/state_provider.dart';
 import 'package:dan_xi/repository/fdu/bus_repository.dart';
@@ -152,9 +153,9 @@ class BusFeature extends Feature {
 
   @override
   void onTap() {
-    if (_busList != null) {
+    if (_busList != null && isHoliday != null) {
       smartNavigatorPush(context!, "/bus/detail",
-          arguments: {"busList": _busList, "dataIsHoliday": isHoliday});
+          arguments: BusPageArguments(isHoliday!, _busList!));
     } else {
       refreshData();
     }
