@@ -35,7 +35,9 @@ class EmptyClassroomRepository extends BaseRepositoryWithDio {
   EmptyClassroomRepository._();
 
   @override
-  Dio dio = Dio(BaseOptions(connectTimeout: 3000, receiveTimeout: 3000));
+  Dio dio = Dio(BaseOptions(
+      connectTimeout: const Duration(seconds: 3),
+      receiveTimeout: const Duration(seconds: 3)));
 
   static final _instance = EmptyClassroomRepository._();
 
@@ -66,7 +68,7 @@ class EmptyClassroomRepository extends BaseRepositoryWithDio {
       final html = response.data!.substring(start, end);
       final patternForSeats = RegExp(r'>(\d+)<');
       final patternForUsages =
-          RegExp(r'<td style="background-color[^"]*">(.*?)<\/td>');
+          RegExp(r'<td style="background-color.*?>(.*?)<\/td>');
       final match1 = patternForSeats.firstMatch(html);
       String? roomCapacity;
       if (match1 != null) {
@@ -74,15 +76,8 @@ class EmptyClassroomRepository extends BaseRepositoryWithDio {
       }
       RoomInfo info = RoomInfo(classroomName, date, roomCapacity);
       info.busy = [];
-      bool first = true;
       final match2 = patternForUsages.allMatches(html);
       for (final match in match2) {
-        // the first <td> is used for showing capacity, not course
-        // so we ignore it
-        if (first) {
-          first = false;
-          continue;
-        }
         final content = match.group(1);
         if (content == null || content.isEmpty) {
           info.busy!.add(false);

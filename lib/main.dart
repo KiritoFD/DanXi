@@ -240,7 +240,7 @@ class DanxiApp extends StatelessWidget {
       builder: (BuildContext context) {
         MaterialColor primarySwatch =
             context.select<SettingsProvider, MaterialColor>((value) =>
-                generateMaterialColor(color: Color(value.primarySwatch_V2)));
+                generateMaterialColor(color: Color(value.primarySwatch)));
         // [DynamicThemeController] enables the app to change between dark/light
         // theme without restart on iOS.
         return DynamicThemeController(

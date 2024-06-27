@@ -16,19 +16,18 @@
  */
 
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:beautiful_soup_dart/beautiful_soup.dart';
 import 'package:dan_xi/common/constant.dart';
 import 'package:dan_xi/common/feature_registers.dart';
 import 'package:dan_xi/generated/l10n.dart';
 import 'package:dan_xi/model/opentreehole/division.dart';
-import 'package:dan_xi/model/opentreehole/floor.dart';
 import 'package:dan_xi/model/opentreehole/hole.dart';
 import 'package:dan_xi/model/opentreehole/tag.dart';
 import 'package:dan_xi/model/person.dart';
 import 'package:dan_xi/page/home_page.dart';
 import 'package:dan_xi/page/opentreehole/hole_editor.dart';
+import 'package:dan_xi/page/opentreehole/quiz.dart';
 import 'package:dan_xi/page/platform_subpage.dart';
 import 'package:dan_xi/provider/fduhole_provider.dart';
 import 'package:dan_xi/provider/settings_provider.dart';
@@ -133,23 +132,6 @@ String renderText(
   }
 }
 
-/// Return [OTHole] with all floors prefetched for increased performance when scrolling to the end.
-Future<OTHole> prefetchAllFloors(OTHole hole) async {
-  if (hole.reply != null && hole.reply! < Constant.POST_COUNT_PER_PAGE) {
-    return hole;
-  }
-  List<OTFloor>? floors = await loadAllFloors(hole);
-
-  OTHole holeClone = OTHole.fromJson(jsonDecode(jsonEncode(hole)));
-  return holeClone..floors?.prefetch = floors;
-}
-
-/// Return all floors of a [OTHole].
-Future<List<OTFloor>?> loadAllFloors(OTHole hole) async {
-  return await OpenTreeHoleRepository.getInstance()
-      .loadFloors(hole, startFloor: 0, length: 0);
-}
-
 const String KEY_NO_TAG = "默认";
 
 /// The tab bar for switching divisions.
@@ -177,8 +159,10 @@ class OTTitle extends StatelessWidget {
           singleChoice: true,
           defaultChoice: currentIndex,
           onChoice: (Tag tag, list) {
-            division = context.read<FDUHoleProvider>().currentDivision =
+            division =
                 divisions.firstWhere((element) => element.name == tag.tagTitle);
+            context.read<FDUHoleProvider>().currentDivisionId =
+                division?.division_id;
             ChangeDivisionEvent(division!).fire();
           },
           tagList: divisions
@@ -366,9 +350,20 @@ class TreeHoleSubpageState extends PlatformSubpageState<TreeHoleSubpage> {
     // If no token, NotLoginError will be thrown.
     if (!context.read<FDUHoleProvider>().isUserInitialized) {
       await OpenTreeHoleRepository.getInstance().initializeRepo();
-      context.read<FDUHoleProvider>().currentDivision =
-          OpenTreeHoleRepository.getInstance().getDivisions().firstOrNull;
+      context.read<FDUHoleProvider>().currentDivisionId =
+          OpenTreeHoleRepository.getInstance()
+              .getDivisions()
+              .firstOrNull
+              ?.division_id;
       settingsPageKey.currentState?.setState(() {});
+    }
+
+    bool answered =
+        await OpenTreeHoleRepository.getInstance().hasAnsweredQuestions() ??
+            true;
+    if (!answered) {
+      throw QuizUnansweredError(
+          "User hasn't finished the quiz of forum rules yet. ");
     }
 
     switch (_postsType) {
@@ -412,6 +407,10 @@ class TreeHoleSubpageState extends PlatformSubpageState<TreeHoleSubpage> {
 
         // If not more posts, notify ListView that we reached the end.
         if (loadedPost?.isEmpty ?? false) return [];
+
+        // Remove posts of which the first floor is empty (aka hidden)
+        loadedPost?.removeWhere(
+            (element) => element.floors?.first_floor?.content?.isEmpty ?? true);
 
         // Filter blocked posts
         List<OTTag> hiddenTags =
@@ -721,6 +720,13 @@ class TreeHoleSubpageState extends PlatformSubpageState<TreeHoleSubpage> {
               await smartNavigatorPush(context, "/bbs/login",
                   arguments: {"info": StateProvider.personInfo.value!});
               onLogin();
+            });
+          } else if (error is QuizUnansweredError) {
+            return OTQuizWidget(successCallback: () async {
+              // Update user data
+              await OpenTreeHoleRepository.getInstance()
+                  .getUserProfile(forceUpdate: true);
+              refreshList();
             });
           }
           return ErrorPageWidget.buildWidget(context, error,

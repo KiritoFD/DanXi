@@ -100,6 +100,7 @@ class LoginDialogState extends State<LoginDialog> {
         widget.personInfo.value = newInfo;
         progressDialog.dismiss(showAnim: false);
         Navigator.of(context).pop();
+        showFAQ();
         break;
       case UserGroup.FUDAN_POSTGRADUATE_STUDENT:
       case UserGroup.FUDAN_UNDERGRADUATE_STUDENT:
@@ -112,8 +113,9 @@ class LoginDialogState extends State<LoginDialog> {
           widget.personInfo.value = newInfo;
           progressDialog.dismiss(showAnim: false);
           Navigator.of(context).pop();
+          showFAQ();
         } catch (e) {
-          if (e is DioError) {
+          if (e is DioException) {
             progressDialog.dismiss(showAnim: false);
             rethrow;
           }
@@ -138,6 +140,31 @@ class LoginDialogState extends State<LoginDialog> {
         progressDialog.dismiss(showAnim: false);
         break;
     }
+  }
+
+  Future<bool?> showFAQ() {
+    return showPlatformDialog(
+        context: context,
+        builder: (BuildContext context) => PlatformAlertDialog(
+              title: PlatformText(
+                S.of(context).welcome_feature,
+                textAlign: TextAlign.center,
+              ),
+              content: PlatformText(
+                S.of(context).welcome_prompt,
+                textAlign: TextAlign.center,
+              ),
+              actions: <Widget>[
+                PlatformDialogAction(
+                    child: PlatformText(S.of(context).skip),
+                    onPressed: () => Navigator.pop(context)),
+                PlatformDialogAction(
+                    child: PlatformText(S.of(context).i_see),
+                    onPressed: () {
+                      BrowserUtil.openUrl(Constant.FAQ_URL, context);
+                    }),
+              ],
+            ));
   }
 
   void requestInternetAccess() async {

@@ -29,8 +29,8 @@ import 'package:dan_xi/util/opentreehole/jwt_interceptor.dart';
 import 'package:dio/dio.dart';
 
 class CurriculumBoardRepository extends BaseRepositoryWithDio {
-  static const String _BASE_URL = "https://danke.fduhole.com/api";
-  static const String _BASE_AUTH_URL = "https://auth.fduhole.com/api";
+  static final String _BASE_URL = SettingsProvider.getInstance().dankeBaseUrl;
+  static final String _BASE_AUTH_URL = SettingsProvider.getInstance().authBaseUrl;
 
   CurriculumBoardRepository._() {
     dio.interceptors.add(JWTInterceptor(
@@ -44,9 +44,9 @@ class CurriculumBoardRepository extends BaseRepositoryWithDio {
     // First fetch of the course list is VERY SLOW
     dio.options = BaseOptions(
         receiveDataWhenStatusError: true,
-        connectTimeout: 30000,
-        receiveTimeout: 30000,
-        sendTimeout: 10000);
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(seconds: 10));
   }
 
   /// Short name for the provider singleton
