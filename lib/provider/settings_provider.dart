@@ -32,12 +32,104 @@ import 'package:dan_xi/page/opentreehole/hole_editor.dart';
 import 'package:dan_xi/util/io/user_agent_interceptor.dart';
 import 'package:dan_xi/util/shared_preferences.dart';
 import 'package:flutter/material.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-/// A class to manage [SharedPreferences] Settings
+part 'settings_provider.g.dart';
+
+/// Manage settings stored in [XSharedPreferences].
 ///
-/// Code Integrity Note:
-/// Avoid returning [null] in [SettingsProvider]. Return the default value instead.
-/// Only return [null] when there is no default value.
+/// How-to-use:
+///
+/// Init (only once in main.dart):
+/// ```dart
+/// SettingPref.init();
+/// ```
+///
+/// Read:
+/// ```dart
+/// final value = ref.watch(SettingPref.searchHistory);
+/// ```
+///
+/// Write:
+/// ```dart
+/// ref.read(SettingPref.searchHistory.notifier).set(newValue);
+/// ```
+///
+/// Get key:
+/// ```dart
+/// final key = SettingPref.searchHistory.key;
+/// ```
+class SettingPref {
+  static XSharedPreferences? _preferences;
+
+  static XSharedPreferences get pref => _preferences!; // it cannot be null!
+
+  static void init() async {
+    _preferences = await XSharedPreferences.getInstance();
+  }
+
+  // TODO: we need to migrate all fields here!
+
+  static final searchHistory =
+      stringListSettingFieldProvider('search_history', List<String>.empty());
+  static final timetableSemester =
+      stringSettingFieldProvider('timetable_semester');
+}
+
+/// Below are Riverpod providers for setting fields.
+/// Each field type has its own provider implementation.
+
+@riverpod
+class StringSettingField extends _$StringSettingField {
+  @override
+  String? build(String key, [String? defaultVal]) =>
+      SettingPref.pref.getString(key) ?? defaultVal;
+
+  void set(String? value) {
+    if (value == null) {
+      SettingPref.pref.remove(key);
+    } else {
+      SettingPref.pref.setString(key, value);
+    }
+    state = value ?? defaultVal;
+  }
+}
+
+@riverpod
+class BoolSettingField extends _$BoolSettingField {
+  @override
+  bool? build(String key, [bool? defaultVal]) =>
+      SettingPref.pref.getBool(key) ?? defaultVal;
+
+  void set(bool? value) {
+    if (value == null) {
+      SettingPref.pref.remove(key);
+    } else {
+      SettingPref.pref.setBool(key, value);
+    }
+    state = value ?? defaultVal;
+  }
+}
+
+@riverpod
+class StringListSettingField extends _$StringListSettingField {
+  @override
+  List<String>? build(String key, [List<String>? defaultVal]) =>
+      SettingPref.pref.getStringList(key) ?? defaultVal;
+
+  void set(List<String>? value) {
+    if (value == null) {
+      SettingPref.pref.remove(key);
+    } else {
+      SettingPref.pref.setStringList(key, value);
+    }
+    state = value ?? defaultVal;
+  }
+}
+
+// === BELOW IS DEPRECATED ===
+// Waiting for migration to Riverpod!
+
 class SettingsProvider with ChangeNotifier {
   XSharedPreferences? preferences;
   static final _instance = SettingsProvider._();
