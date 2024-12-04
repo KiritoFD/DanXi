@@ -1,0 +1,18 @@
+{
+  "name": "danxi",
+  "version": "1.4.5",
+  "description": "DanXi for HarmonyOS",
+  "main": "",
+  "scripts": {
+    "build": "hvigor --mode prod",
+    "dev": "hvigor --mode dev",
+    "preview": "hvigor preview"
+  },
+  "dependencies": {
+    "@ohos/hypium": "1.0.6"
+  },
+  "devDependencies": {
+    "@ohos/hvigor": "1.4.6",
+    "@ohos/hvigor-ohos-plugin": "1.4.6"
+  }
+}

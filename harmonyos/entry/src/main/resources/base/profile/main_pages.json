@@ -1,0 +1,8 @@
+{
+  "src": [
+    "pages/LoginPage",
+    "pages/CoursePage",
+    "pages/Index",
+    "pages/CourseDetailPage"
+  ]
+}
