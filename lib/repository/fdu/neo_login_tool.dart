@@ -5,7 +5,6 @@ import 'package:beautiful_soup_dart/beautiful_soup.dart';
 import 'package:dan_xi/model/person.dart';
 import 'package:dan_xi/provider/state_provider.dart';
 import 'package:dan_xi/repository/cookie/persistent_cookie_jar.dart';
-import 'package:dan_xi/repository/fdu/uis_login_tool.dart' as uis;
 import 'package:dan_xi/util/condition_variable.dart';
 import 'package:dan_xi/util/io/cookie_manager_fix.dart';
 import 'package:dan_xi/util/io/dio_utils.dart';
@@ -680,11 +679,11 @@ class EnhancedAuthenticationRequiredException
   EnhancedAuthenticationRequiredException(this.loginUrl, this.targetHost);
 }
 
-class CredentialsInvalidException implements AuthenticationV1FailedException, uis.CredentialsInvalidException {}
+class CredentialsInvalidException implements AuthenticationV1FailedException {}
 
-class NetworkMaintenanceException implements AuthenticationV1FailedException, uis.NetworkMaintenanceException {}
+class NetworkMaintenanceException implements AuthenticationV1FailedException {}
 
-class WeakPasswordException implements AuthenticationV1FailedException, uis.WeakPasswordException {}
+class WeakPasswordException implements AuthenticationV1FailedException {}
 
 /// A specialized queue that manages login requests to prevent concurrent authentication attempts.
 ///

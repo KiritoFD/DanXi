@@ -572,7 +572,9 @@ class HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _credentialsInvalidSubscription.bindOnlyInvalid(
         Constant.eventBus
             .on()
-            .where((e) => e is uis.CredentialsInvalidException)
+            .where((e) =>
+                e is uis.CredentialsInvalidException ||
+                e is neo.CredentialsInvalidException)
             .listen((_) => _dealWithCredentialsInvalidException()),
         hashCode);
     _enhancedAuthSubscription.bindOnlyInvalid(
