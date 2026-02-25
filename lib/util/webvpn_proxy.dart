@@ -26,6 +26,15 @@ class WebvpnRequestException implements Exception {
 /// # Order of interceptors
 /// This interceptor should be added BEFORE [RedirectInterceptor] but AFTER any other interceptors.
 class WebVPNInterceptor extends Interceptor {
+  static const _allowedHosts = {
+    "www.fduhole.com",
+    "auth.fduhole.com",
+    "danke.fduhole.com",
+    "forum.fduhole.com",
+    "image.fduhole.com",
+    "yjsxk.fudan.edu.cn",
+    "10.64.130.6",
+  };
   static final _hostCache = <String, String>{};
   static const String DIRECT_CONNECT_TEST_URL = "https://forum.fduhole.com";
   static const String EXTRA_ROUTE_TYPE = "webvpn_route_type";
@@ -48,6 +57,9 @@ class WebVPNInterceptor extends Interceptor {
 
     final uriScheme = uri.scheme.isEmpty ? "http" : uri.scheme;
     if (uriScheme != "http" && uriScheme != "https") {
+      return null;
+    }
+    if (!_allowedHosts.contains(uri.host)) {
       return null;
     }
 
@@ -75,7 +87,13 @@ class WebVPNInterceptor extends Interceptor {
   static final aesEngine = AESEngine();
   static String _encrypt(String text, String keyText, String ivText) {
     final originalLength = text.length;
-    final paddedText = _padText(text);
+    final blockSize = 16;
+    // Caveats: the length of String might not be the length of UTF-8 bytes. But
+    // the JS method in WebVPN is indeed written this way.
+    final remainder = text.length % blockSize;
+    final paddedText = remainder == 0
+        ? text
+        : text + "0" * (blockSize - remainder);
 
     final textBytes = utf8.encode(paddedText);
     final keyBytes = utf8.encode(keyText);
@@ -93,14 +111,6 @@ class WebVPNInterceptor extends Interceptor {
     final ivHex = utf8.encode(ivText).toHexString();
     final encryptedHex = encryptedBytes.toHexString();
     return ivHex + encryptedHex.substring(0, 2 * originalLength);
-  }
-
-  static String _padText(String text, {String encodingName = "utf8"}) {
-    final blockSize = encodingName == "utf8" ? 16 : 32;
-    // Caveats: the length of String might not be the length of UTF-8 bytes. But
-    // the JS method in WebVPN is indeed written this way.
-    final remainder = text.length % blockSize;
-    return remainder == 0 ? text : text + "0" * (blockSize - remainder);
   }
 
   /// Check if we are able to connect to the service directly (without WebVPN).
