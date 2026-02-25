@@ -1,14 +1,13 @@
-import 'pubspec.yaml.g.dart' as p;
-
 class _PubspecVersionCompat {
   const _PubspecVersionCompat();
 
+  static const String _versionOverride = String.fromEnvironment(
+    'APP_VERSION',
+    defaultValue: '0.0.0+0',
+  );
+
   String get canonical {
-    final Object? source = p.source;
-    if (source is Map && source['version'] is String) {
-      return source['version'] as String;
-    }
-    return '0.0.0+0';
+    return _versionOverride;
   }
 
   int get major => _parseCore()[0];

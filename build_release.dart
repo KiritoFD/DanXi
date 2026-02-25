@@ -75,27 +75,45 @@ void main(List<String> arguments) async {
 
   print('Start building...');
 
+  final String appVersion = readAppVersionFromPubspec();
+  print('App version: $appVersion');
+
   print('Run build_runner...');
   await runFlutterProcess(
       ['pub', 'run', 'build_runner', 'build', '--delete-conflicting-outputs']);
 
   switch (args['target']) {
     case 'android':
-      await buildAndroid(versionCode, gitHash);
+      await buildAndroid(versionCode, gitHash, appVersion: appVersion);
       break;
     case 'android-armv8':
-      await buildAndroid(versionCode, gitHash, target: 'android-arm64');
+      await buildAndroid(versionCode, gitHash,
+          target: 'android-arm64', appVersion: appVersion);
       break;
     case 'windows':
-      await buildWindows(versionCode, gitHash);
+      await buildWindows(versionCode, gitHash, appVersion: appVersion);
       break;
     case 'aab':
-      await buildAppBundle(versionCode, gitHash);
+      await buildAppBundle(versionCode, gitHash, appVersion: appVersion);
       break;
     case 'linux':
-      await buildLinux(versionCode, gitHash);
+      await buildLinux(versionCode, gitHash, appVersion: appVersion);
       break;
   }
+}
+
+String readAppVersionFromPubspec() {
+  final pubspec = File('pubspec.yaml');
+  if (!pubspec.existsSync()) {
+    return '0.0.0+0';
+  }
+  for (final line in pubspec.readAsLinesSync()) {
+    final match = RegExp(r'^\s*version:\s*([^\s#]+)').firstMatch(line);
+    if (match != null) {
+      return match.group(1)!;
+    }
+  }
+  return '0.0.0+0';
 }
 
 Future<int> runFlutterProcess(List<String> args) async {
@@ -115,13 +133,14 @@ Future<int> runDartProcess(List<String> args) async {
 }
 
 Future<void> buildAndroid(String? versionCode, String gitHash,
-    {String? target}) async {
+    {String? target, required String appVersion}) async {
   print('Build for Android...');
   await runFlutterProcess([
     'build',
     'apk',
     '--release',
     '--dart-define=GIT_HASH=$gitHash',
+    '--dart-define=APP_VERSION=$appVersion',
     if (target != null) '--target-platform=$target',
   ]);
 
@@ -139,13 +158,15 @@ Future<void> buildAndroid(String? versionCode, String gitHash,
   print('Build success.');
 }
 
-Future<void> buildWindows(String? versionCode, String gitHash) async {
+Future<void> buildWindows(String? versionCode, String gitHash,
+    {required String appVersion}) async {
   print('Build for Windows...');
   await runFlutterProcess([
     'build',
     'windows',
     '--release',
     '--dart-define=GIT_HASH=$gitHash',
+    '--dart-define=APP_VERSION=$appVersion',
   ]);
 
   print('Clean old files...');
@@ -161,13 +182,15 @@ Future<void> buildWindows(String? versionCode, String gitHash) async {
   print('Build success.');
 }
 
-Future<void> buildAppBundle(String? versionCode, String gitHash) async {
+Future<void> buildAppBundle(String? versionCode, String gitHash,
+    {required String appVersion}) async {
   print('Build for App Bundle (Google Play Distribution)...');
   await runFlutterProcess([
     'build',
     'appbundle',
     '--release',
     '--dart-define=GIT_HASH=$gitHash',
+    '--dart-define=APP_VERSION=$appVersion',
   ]);
 
   print('Clean old files...');
@@ -182,13 +205,15 @@ Future<void> buildAppBundle(String? versionCode, String gitHash) async {
   print('Build success.');
 }
 
-Future<void> buildLinux(String? versionCode, String gitHash) async {
+Future<void> buildLinux(String? versionCode, String gitHash,
+    {required String appVersion}) async {
   print('Build for Linux...');
   await runFlutterProcess([
     'build',
     'linux',
     '--release',
     '--dart-define=GIT_HASH=$gitHash',
+    '--dart-define=APP_VERSION=$appVersion',
   ]);
 
   print('Clean old files...');
