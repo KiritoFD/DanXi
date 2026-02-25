@@ -71,7 +71,9 @@ class PlatformMasterDetailApp extends StatelessWidget {
       initialRoute: '/home',
       observers: [HeroController()],
     );
-    if (!isTablet(context)) {
+    // OHOS tablet currently prefers single-pane to avoid an always-blank
+    // placeholder detail pane on cold start.
+    if (!isTablet(context) || PlatformX.isOhos) {
       return masterNavigatorWidget;
     }
     return Container(

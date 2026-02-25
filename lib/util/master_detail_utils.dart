@@ -25,5 +25,5 @@ bool isTablet(BuildContext context) {
   // 1. https://developer.android.com/develop/ui/compose/layouts/adaptive/use-window-size-classes
   // 2. https://m2.material.io/design/layout/responsive-layout-grid.html#breakpoints
   // 3. https://m3.material.io/foundations/layout/applying-layout/window-size-classes
-  return MediaQuery.widthOf(context) >= 840.0;
+  return MediaQuery.of(context).size.width >= 840.0;
 }

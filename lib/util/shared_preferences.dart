@@ -18,9 +18,11 @@
 import 'package:encrypt/encrypt.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:encrypt_shared_preferences/provider.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -36,6 +38,8 @@ class XSharedPreferences {
 
   final FlutterSecureStorage _keyStore;
   late final EncryptedSharedPreferences _preferences;
+  Map<String, dynamic>? _ohosStore;
+  File? _ohosStoreFile;
 
   XSharedPreferences._()
       : _keyStore = const FlutterSecureStorage(
@@ -43,6 +47,7 @@ class XSharedPreferences {
         );
 
   static XSharedPreferences? _instance;
+  static bool get _isOhos => !kIsWeb && Platform.operatingSystem == "ohos";
 
   static String _generateKey() {
     Random random;
@@ -64,23 +69,36 @@ class XSharedPreferences {
   static Future<XSharedPreferences> getInstance() async {
     if (_instance == null) {
       _instance = XSharedPreferences._();
-      // initialize the key store if the key does not exist.
-      bool hasKey = await _instance!._keyStore.containsKey(key: KEY_CIPHER);
-      if (!hasKey) {
-        await _instance!._keyStore
-            .write(key: KEY_CIPHER, value: _generateKey());
+      if (_isOhos) {
+        await _instance!._initOhosStore();
+        return _instance!;
       }
-      String key = (await _instance!._keyStore.read(key: KEY_CIPHER))!;
+      // Use secure storage when available; fallback to SharedPreferences on
+      // unsupported platforms (e.g. OHOS) so startup does not fail.
+      final sharedPreferences = await SharedPreferences.getInstance();
+      String? key;
+      try {
+        bool hasKey = await _instance!._keyStore.containsKey(key: KEY_CIPHER);
+        if (!hasKey) {
+          await _instance!._keyStore.write(key: KEY_CIPHER, value: _generateKey());
+        }
+        key = await _instance!._keyStore.read(key: KEY_CIPHER);
+      } catch (_) {
+        key = sharedPreferences.getString(KEY_CIPHER);
+        if (key == null) {
+          key = _generateKey();
+          await sharedPreferences.setString(KEY_CIPHER, key);
+        }
+      }
       // initialize the encrypted preferences.
-      await EncryptedSharedPreferences.initialize(key,
+      await EncryptedSharedPreferences.initialize(key!,
           encryptor: LegacyAESEncryptor());
       _instance!._preferences = EncryptedSharedPreferences.getInstance();
       // migrate the data from [SharedPreferences] to [EncryptedSharedPreferences]
       // if the data has not been flagged as migrated.
       if (_instance!.getBool(KEY_MIGRATED) != true) {
-        SharedPreferences sharedPreferences =
-            await SharedPreferences.getInstance();
         for (String oldKey in sharedPreferences.getKeys()) {
+          if (oldKey == KEY_CIPHER) continue;
           dynamic value = sharedPreferences.get(oldKey);
           if (value is String) {
             await _instance!.setString(oldKey, value);
@@ -101,9 +119,36 @@ class XSharedPreferences {
     return _instance!;
   }
 
+  Future<void> _initOhosStore() async {
+    final base = Directory.systemTemp.path;
+    _ohosStoreFile = File("$base/danxi_xshared_prefs.json");
+    if (await _ohosStoreFile!.exists()) {
+      try {
+        final content = await _ohosStoreFile!.readAsString();
+        final decoded = jsonDecode(content);
+        if (decoded is Map<String, dynamic>) {
+          _ohosStore = decoded;
+          return;
+        }
+      } catch (_) {}
+    }
+    _ohosStore = <String, dynamic>{};
+    await _flushOhosStore();
+  }
+
+  Future<void> _flushOhosStore() async {
+    if (!_isOhos || _ohosStoreFile == null || _ohosStore == null) return;
+    await _ohosStoreFile!.writeAsString(jsonEncode(_ohosStore));
+  }
+
   // Proxy methods for [EncryptedSharedPreferences]
 
   Future<bool> clear() async {
+    if (_isOhos) {
+      _ohosStore?.clear();
+      await _flushOhosStore();
+      return true;
+    }
     bool success = await _preferences.clear();
     if (success) {
       // mark the data as migrated after clearing. Or the data written after clearing will be re-migrated.
@@ -112,47 +157,155 @@ class XSharedPreferences {
     return success;
   }
 
-  Future<bool> remove(String key) => _preferences.remove(key);
+  Future<bool> remove(String key) async {
+    if (_isOhos) {
+      final removed = _ohosStore?.remove(key) != null;
+      if (removed) await _flushOhosStore();
+      return removed;
+    }
+    return _preferences.remove(key);
+  }
 
-  FutureOr<Set<String>> getKeys() => _preferences.getKeys();
+  FutureOr<Set<String>> getKeys() => _isOhos ? _ohosStore!.keys.toSet() : _preferences.getKeys();
 
-  Future<bool> setString(String dataKey, String? dataValue) =>
-      _preferences.setString(dataKey, dataValue);
+  Future<bool> setString(String dataKey, String? dataValue) async {
+    if (_isOhos) {
+      if (dataValue == null) {
+        _ohosStore?.remove(dataKey);
+      } else {
+        _ohosStore?[dataKey] = dataValue;
+      }
+      await _flushOhosStore();
+      return true;
+    }
+    return _preferences.setString(dataKey, dataValue);
+  }
 
-  Future<bool> setInt(String dataKey, int? dataValue) =>
-      _preferences.setInt(dataKey, dataValue);
+  Future<bool> setInt(String dataKey, int? dataValue) async {
+    if (_isOhos) {
+      if (dataValue == null) {
+        _ohosStore?.remove(dataKey);
+      } else {
+        _ohosStore?[dataKey] = dataValue;
+      }
+      await _flushOhosStore();
+      return true;
+    }
+    return _preferences.setInt(dataKey, dataValue);
+  }
 
-  Future<bool> setDouble(String dataKey, double? dataValue) =>
-      _preferences.setDouble(dataKey, dataValue);
+  Future<bool> setDouble(String dataKey, double? dataValue) async {
+    if (_isOhos) {
+      if (dataValue == null) {
+        _ohosStore?.remove(dataKey);
+      } else {
+        _ohosStore?[dataKey] = dataValue;
+      }
+      await _flushOhosStore();
+      return true;
+    }
+    return _preferences.setDouble(dataKey, dataValue);
+  }
 
-  Future<bool> setBool(String dataKey, bool? dataValue) =>
-      _preferences.setBoolean(dataKey, dataValue);
+  Future<bool> setBool(String dataKey, bool? dataValue) async {
+    if (_isOhos) {
+      if (dataValue == null) {
+        _ohosStore?.remove(dataKey);
+      } else {
+        _ohosStore?[dataKey] = dataValue;
+      }
+      await _flushOhosStore();
+      return true;
+    }
+    return _preferences.setBoolean(dataKey, dataValue);
+  }
 
-  Future<bool> setStringList(String dataKey, List<String>? dataValue) =>
-      setString(dataKey, jsonEncode(dataValue));
+  Future<bool> setStringList(String dataKey, List<String>? dataValue) async {
+    if (_isOhos) {
+      if (dataValue == null) {
+        _ohosStore?.remove(dataKey);
+      } else {
+        _ohosStore?[dataKey] = dataValue;
+      }
+      await _flushOhosStore();
+      return true;
+    }
+    return setString(dataKey, jsonEncode(dataValue));
+  }
 
-  Future<bool> setIntList(String dataKey, List<int>? dataValue) =>
-      setString(dataKey, jsonEncode(dataValue));
+  Future<bool> setIntList(String dataKey, List<int>? dataValue) async {
+    if (_isOhos) {
+      if (dataValue == null) {
+        _ohosStore?.remove(dataKey);
+      } else {
+        _ohosStore?[dataKey] = dataValue;
+      }
+      await _flushOhosStore();
+      return true;
+    }
+    return setString(dataKey, jsonEncode(dataValue));
+  }
 
-  String? getString(String key) => _preferences.getString(key);
+  String? getString(String key) {
+    if (_isOhos) {
+      final value = _ohosStore?[key];
+      return value is String ? value : null;
+    }
+    return _preferences.getString(key);
+  }
 
-  int? getInt(String key) => _preferences.getInt(key);
+  int? getInt(String key) {
+    if (_isOhos) {
+      final value = _ohosStore?[key];
+      return value is int ? value : null;
+    }
+    return _preferences.getInt(key);
+  }
 
-  double? getDouble(String key) => _preferences.getDouble(key);
+  double? getDouble(String key) {
+    if (_isOhos) {
+      final value = _ohosStore?[key];
+      return value is double ? value : null;
+    }
+    return _preferences.getDouble(key);
+  }
 
-  bool? getBool(String key) => _preferences.getBoolean(key);
+  bool? getBool(String key) {
+    if (_isOhos) {
+      final value = _ohosStore?[key];
+      return value is bool ? value : null;
+    }
+    return _preferences.getBoolean(key);
+  }
 
   List<int>? getIntList(String key) {
+    if (_isOhos) {
+      final value = _ohosStore?[key];
+      if (value is List) {
+        return value.map((e) => e as int).toList();
+      }
+      return null;
+    }
     String? value = getString(key);
     return value == null ? null : jsonDecode(value).cast<int>();
   }
 
   List<String>? getStringList(String key) {
+    if (_isOhos) {
+      final value = _ohosStore?[key];
+      if (value is List) {
+        return value.map((e) => e as String).toList();
+      }
+      return null;
+    }
     String? value = getString(key);
     return value == null ? null : jsonDecode(value).cast<String>();
   }
 
   bool containsKey(String key) {
+    if (_isOhos) {
+      return _ohosStore?.containsKey(key) ?? false;
+    }
     // FIXME: an ugly implementation. Call for the library to provide a better way.
     try {
       String? value = getString(key);

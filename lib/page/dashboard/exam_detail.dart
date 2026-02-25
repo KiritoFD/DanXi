@@ -60,33 +60,13 @@ Future<String> studentId(Ref ref) async {
       .loadStudentId(semesterBundle.defaultSemesterId);
 }
 
-// Automatic retry is introduced in 3.0.0, so we are customizing the `retry`
-// parameter to keep the intermediate error states on `SemesterNoExamException`.
-//
-// https://pub.dev/documentation/riverpod/latest/riverpod/ProviderContainer/defaultRetry.html
-//
-// flutter_riverpod 3.0.0-dev.12
-// > Failing providers are now automatically retried after a delay.
-//
-// flutter_riverpod 3.0.0-dev.18
-// > A provider that is currently being retried is now flagged as "loading"
-// > while the retry attempts complete. Meaning that
-// > `ref.watch(provider.future)` skips the intermediate error states.
-Duration? _examListRetry(int retryCount, Object error) {
-  if (error is SemesterNoExamException) {
-    return null;
-  }
-  // https://pub.dev/documentation/riverpod/latest/riverpod/ProviderContainer/defaultRetry.html
-  return ProviderContainer.defaultRetry(retryCount, error);
-}
-
-@Riverpod(keepAlive: true, retry: _examListRetry)
+@Riverpod(keepAlive: true)
 Future<List<Exam>> examList(Ref ref) async {
   final studentId = await ref.watch(studentIdProvider.future);
   return await EduServiceRepository.getInstance().loadExamList(studentId);
 }
 
-@Riverpod(retry: _examListRetry)
+@riverpod
 Future<List<Exam>> examListInSemester(Ref ref, SemesterInfo semester) async {
   final exams = await ref.watch(examListProvider.future);
   final examsInSemester = exams
@@ -400,7 +380,7 @@ class ExamList extends HookConsumerWidget {
         {}
       case _:
         {
-          trailing = const PlatformCircularProgressIndicator();
+          trailing = PlatformCircularProgressIndicator();
           subtitle = Text(S.of(context).loading);
         }
     }

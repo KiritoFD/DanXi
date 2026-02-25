@@ -19,7 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 
 class PlatformNavBarM3 extends PlatformNavBar {
-  const PlatformNavBarM3({
+  PlatformNavBarM3({
     super.key,
     super.widgetKey,
     super.backgroundColor,

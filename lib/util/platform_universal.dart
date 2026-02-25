@@ -42,6 +42,8 @@ class PlatformX {
 
   static bool get isWindows => !isWeb && Platform.isWindows;
 
+  static bool get isOhos => !isWeb && Platform.operatingSystem == 'ohos';
+
   static bool get isMobile => isAndroid || isIOS;
 
   static bool get isDesktop => !isMobile;

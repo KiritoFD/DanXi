@@ -727,7 +727,13 @@ class HomePageState extends State<HomePage> with WidgetsBindingObserver {
       TestLifeCycle.onStart(context);
     }
 
-    StateProvider.isLoggedIn.value = SettingsProvider.getInstance().isLoggedIn;
+    // Keep persisted login flag and actual credentials in sync.
+    final bool hasAnyCredential = StateProvider.personInfo.value != null ||
+        SettingsProvider.getInstance().forumToken != null;
+    final bool effectiveLoggedIn =
+        SettingsProvider.getInstance().isLoggedIn && hasAnyCredential;
+    SettingsProvider.getInstance().isLoggedIn = effectiveLoggedIn;
+    StateProvider.isLoggedIn.value = effectiveLoggedIn;
   }
 
   Widget _buildBody(Widget title) {

@@ -32,7 +32,7 @@ const Border _kDefaultNavBarBorder = Border(
 /// A copy of [PlatformAppBar], solving the issue "iOS navigationBar animation glitch" in commit a540b4f4.
 class PlatformAppBarX extends PlatformAppBar {
 
-  const PlatformAppBarX({
+  PlatformAppBarX({
     super.key,
     super.widgetKey,
     super.title,
@@ -91,7 +91,7 @@ class PlatformAppBarX extends PlatformAppBar {
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      middle: MediaQuery(
+      title: MediaQuery(
           data: MediaQueryData(textScaler: MediaQuery.textScalerOf(context)),
           child: data?.title ?? title!),
     );

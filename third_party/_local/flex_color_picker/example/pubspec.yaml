@@ -1,0 +1,43 @@
+name: color_picker_example
+description: Two examples of how to use the FlexColorPicker package.
+version: 3.7.1
+publish_to: 'none'
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.27.0'
+
+dependencies:
+  # https://pub.dev/packages/flex_color_picker
+  flex_color_picker:
+    path: ../
+
+  flutter:
+    sdk: flutter
+
+  # https://pub.dev/packages/flutter_riverpod
+  flutter_riverpod: ^2.6.1
+
+  # https://pub.dev/packages/google_fonts
+  google_fonts: ^6.2.1
+
+  # https://pub.dev/packages/hive
+  hive: ^2.2.3
+
+  # https://pub.dev/packages/path_provider:
+  path_provider: ^2.1.5
+
+  # https://pub.dev/packages/url_launcher
+  # Used for launching a WEB URL (by Google flutter.dev).
+  url_launcher: ^6.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  test:
+
+flutter:
+  uses-material-design: true
+  # All image assets used by the program.
+  # Only an app icon used in the About dialog.
+  assets:
+    - assets/images/
