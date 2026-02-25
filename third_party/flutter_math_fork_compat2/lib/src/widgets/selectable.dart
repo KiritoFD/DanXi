@@ -294,7 +294,7 @@ class SelectableMath extends StatelessWidget {
       case TargetPlatform.fuchsia:
       case TargetPlatform.linux:
       case TargetPlatform.windows:
-      case TargetPlatform.ohos:
+      default:
         forcePressEnabled = false;
         textSelectionControls ??= materialTextSelectionControls;
         paintCursorAboveText = false;
@@ -482,7 +482,7 @@ class InternalSelectableMathState extends State<InternalSelectableMath>
       case TargetPlatform.fuchsia:
       case TargetPlatform.linux:
       case TargetPlatform.windows:
-      case TargetPlatform.ohos:
+      default:
       // Do nothing.
     }
   }

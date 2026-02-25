@@ -46,13 +46,14 @@ String platformControlKey(TargetPlatform platform, String key) {
     case TargetPlatform.android:
     case TargetPlatform.iOS:
     case TargetPlatform.fuchsia:
-    case TargetPlatform.ohos:
       return '';
     case TargetPlatform.linux:
     case TargetPlatform.windows:
       return ' (CTRL-$key)';
     case TargetPlatform.macOS:
       return ' (CMD-$key)';
+    default:
+      return '';
   }
 }
 
@@ -62,12 +63,13 @@ bool isDesktop(TargetPlatform platform) {
     case TargetPlatform.android:
     case TargetPlatform.iOS:
     case TargetPlatform.fuchsia:
-    case TargetPlatform.ohos:
       return false;
     case TargetPlatform.linux:
     case TargetPlatform.windows:
     case TargetPlatform.macOS:
       return true;
+    default:
+      return false;
   }
 }
 

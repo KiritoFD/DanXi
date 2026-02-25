@@ -71,7 +71,7 @@ PlatformStyle _platformStyle(BuildContext context) {
       return platformStyle?.macos ?? PlatformStyle.Cupertino;
     case TargetPlatform.windows:
       return platformStyle?.windows ?? PlatformStyle.Material;
-    case TargetPlatform.ohos:
+    default:
       return platformStyle?.android ?? PlatformStyle.Material;
   }
 }
@@ -112,7 +112,7 @@ PlatformTarget platform(BuildContext context) {
       return PlatformTarget.macOS;
     case TargetPlatform.windows:
       return PlatformTarget.windows;
-    case TargetPlatform.ohos:
+    default:
       return PlatformTarget.android;
   }
 }

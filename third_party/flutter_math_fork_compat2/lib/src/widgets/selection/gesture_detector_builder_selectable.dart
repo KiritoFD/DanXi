@@ -52,7 +52,7 @@ class SelectableMathSelectionGestureDetectorBuilder
         case TargetPlatform.fuchsia:
         case TargetPlatform.linux:
         case TargetPlatform.windows:
-        case TargetPlatform.ohos:
+        default:
           delegate.selectPositionAt(
             from: lastTapDownPosition!,
             cause: SelectionChangedCause.tap,

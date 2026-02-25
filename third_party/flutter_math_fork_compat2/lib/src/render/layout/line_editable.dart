@@ -480,7 +480,7 @@ class RenderEditableLine extends RenderLine {
       case TargetPlatform.fuchsia:
       case TargetPlatform.linux:
       case TargetPlatform.windows:
-      case TargetPlatform.ohos:
+      default:
         _caretPrototype = Rect.fromLTWH(
           0.0,
           0.0, // _kCaretHeightOffset,
