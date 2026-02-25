@@ -1,4 +1,4 @@
-﻿/*
+/*
  *     Copyright (C) 2021 kavinzhao
  *
  *     This program is free software: you can redistribute it and/or modify
@@ -377,7 +377,7 @@ class BBSEditorWidgetState extends State<BBSEditorWidget> {
                           (BuildContext context, WidgetRef ref, Widget? child) {
                         final stickers = ref.watch(availableStickersProvider);
                         return stickers.when(
-                          loading: () => Center(
+                          loading: () => const Center(
                             child: PlatformCircularProgressIndicator(),
                           ),
                           error: (error, stackTrace) => Center(
@@ -473,7 +473,7 @@ class BBSEditorWidgetState extends State<BBSEditorWidget> {
                     loading: () => SizedBox(
                       width: 60,
                       height: 60,
-                      child: Center(
+                      child: const Center(
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                     ),
@@ -932,4 +932,3 @@ class BBSEditorPageState extends State<BBSEditorPage> {
     }
   }
 }
-

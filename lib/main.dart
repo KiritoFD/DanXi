@@ -18,7 +18,7 @@
 import 'dart:async';
 import 'dart:ui';
 
-import 'package:bitsdojo_window/bitsdojo_window.dart';
+import 'package:dan_xi/common/constant.dart';
 import 'package:dan_xi/feature/feature_map.dart';
 import 'package:dan_xi/generated/l10n.dart';
 import 'package:dan_xi/page/danke/course_group_detail.dart';
@@ -50,8 +50,10 @@ import 'package:dan_xi/page/subpage_forum.dart';
 import 'package:dan_xi/provider/forum_provider.dart';
 import 'package:dan_xi/provider/language_manager.dart';
 import 'package:dan_xi/provider/notification_provider.dart';
+import 'package:dan_xi/page/subpage_settings.dart';
 import 'package:dan_xi/provider/settings_provider.dart';
 import 'package:dan_xi/provider/state_provider.dart';
+import 'package:dan_xi/repository/fdu/neo_login_tool.dart';
 import 'package:dan_xi/util/lazy_future.dart';
 import 'package:dan_xi/util/master_detail_view.dart';
 import 'package:dan_xi/util/platform_universal.dart';
@@ -59,6 +61,7 @@ import 'package:dan_xi/util/screen_proxy.dart';
 import 'package:dan_xi/widget/libraries/dynamic_theme.dart';
 import 'package:dan_xi/widget/libraries/error_page_widget.dart';
 import 'package:device_identity/device_identity.dart';
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -66,24 +69,14 @@ import 'package:flutter_fgbg/flutter_fgbg.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart' show ProviderScope;
+import 'package:hooks_riverpod/hooks_riverpod.dart' as riverpod;
 import 'package:material_color_generator/material_color_generator.dart';
 import 'package:provider/provider.dart';
 import 'package:xiao_mi_push_plugin/xiao_mi_push_plugin.dart';
 
-import 'common/constant.dart';
-
-bool _appStarted = false;
-
-void _startDanxiApp() {
-  if (_appStarted) return;
-  _appStarted = true;
-  runApp(const DanxiApp());
-}
-
 /// The main entry of the whole app.
 /// Do some initial work here.
-void main() {
+Future<void> main() async {
   // Ensure that the engine has bound itself to
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -112,33 +105,24 @@ void main() {
 
   // Init SettingsProvider. SettingsProvider is a singleton class that stores
   // all the settings of the app.
-  unawaited(() async {
-    try {
-      await SettingsProvider.getInstance().init().timeout(
-            const Duration(seconds: 10),
-          );
-      final tagAvailable = await SettingsProvider.getInstance()
-          .isTagSuggestionAvailable()
-          .timeout(const Duration(seconds: 5), onTimeout: () => false);
-      SettingsProvider.getInstance().tagSuggestionAvailable = tagAvailable;
-      if (PlatformX.isAndroid) {
-        await DeviceIdentity.register().timeout(const Duration(seconds: 5));
-      }
-    } catch (e) {
-      debugPrint('DanXi bootstrap failed: $e');
-    } finally {
-      // Ensure startup init failure won't block first frame.
-      _startDanxiApp();
-    }
-  }());
+  await SettingsProvider.getInstance().init();
 
-  // Init DesktopWindow on desktop environment.
-  if (PlatformX.isDesktop) {
-    doWhenWindowReady(() {
-      final win = appWindow;
-      win.show();
-    });
+  // Restore persisted session cookies before any network requests.
+  // This must run after SettingsProvider.init() because it depends on
+  // XSharedPreferences being initialized.
+  await FudanSession.initSession();
+
+  SettingsProvider.getInstance().tagSuggestionAvailable =
+      await SettingsProvider.getInstance().isTagSuggestionAvailable();
+
+  if (PlatformX.isAndroid) {
+    await DeviceIdentity.register();
   }
+
+  // This is the entrypoint of a simple Flutter app.
+  // runApp() is a function that takes a [Widget] and makes it the root
+  // of the widget tree.
+  runApp(riverpod.ProviderScope(child: const DanxiApp()));
 }
 
 class TouchMouseScrollBehavior extends MaterialScrollBehavior {
@@ -174,6 +158,7 @@ class DanxiApp extends StatelessWidget {
     '/placeholder': (context, {arguments}) => ColoredBox(
         color: Theme.of(context).scaffoldBackgroundColor.withAlpha(254)),
     '/home': (context, {arguments}) => const HomePage(),
+    '/settings': (context, {arguments}) => const SettingsPage(),
     '/diagnose': (context, {arguments}) =>
         DiagnosticConsole(arguments: arguments),
     '/bbs/reports': (context, {arguments}) =>
@@ -183,7 +168,7 @@ class DanxiApp extends StatelessWidget {
     '/card/crowdData': (context, {arguments}) =>
         CardCrowdData(arguments: arguments),
     '/room/detail': (context, {arguments}) =>
-        EmptyClassroomDetailPage(arguments: arguments),
+        const EmptyClassroomDetailPage(),
     '/bbs/postDetail': (context, {arguments}) =>
         BBSPostDetail(arguments: arguments),
     '/notice/aao/list': (context, {arguments}) =>
@@ -249,66 +234,101 @@ class DanxiApp extends StatelessWidget {
       // [DynamicThemeController] enables the app to change between dark/light
       // theme without restart on iOS.
       builder: (BuildContext context) {
-        MaterialColor primarySwatch =
-            context.select<SettingsProvider, MaterialColor>((value) =>
-                generateMaterialColor(color: Color(value.primarySwatch)));
-        final themeType =
-            context.select<SettingsProvider, ThemeType>((s) => s.themeType);
-        final resolvedTheme = themeType.getBrightness() == Brightness.dark
-            ? Constant.darkTheme(PlatformX.isCupertino(context), primarySwatch)
-            : Constant.lightTheme(PlatformX.isCupertino(context), primarySwatch);
-        return DynamicThemeController(
-          lightTheme: Constant.lightTheme(
-              PlatformX.isCupertino(context), primarySwatch),
-          darkTheme:
-              Constant.darkTheme(PlatformX.isCupertino(context), primarySwatch),
-          child: Material(
-            child: PlatformApp(
-              // Remember? We have just defined this scroll behavior class above
-              // to enable scrolling with mouse & stylus.
-              scrollBehavior: TouchMouseScrollBehavior(),
-              debugShowCheckedModeBanner: false,
-              // Fix cupertino UI text color issue by override text color
-              cupertino: (context, __) => CupertinoAppData(
-                  theme: CupertinoThemeData(
-                      brightness: themeType.getBrightness(),
-                      textTheme: CupertinoTextThemeData(
-                          textStyle: TextStyle(
-                              color: resolvedTheme.textTheme.bodyLarge!.color)))),
-              material: (context, __) => MaterialAppData(theme: resolvedTheme),
-              // Configure i18n delegates.
-              localizationsDelegates: const [
-                // [S] is a generated class that contains all the strings in the
-                // app for l10n.
-                S.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate
-              ],
-              locale: LanguageManager.toLocale(
-                  context.watch<SettingsProvider>().language),
-              supportedLocales: S.delegate.supportedLocales,
-              onUnknownRoute: (settings) => throw AssertionError(
-                  "ERROR: onUnknownRoute() has been called inside the root navigator.\nDevelopers are not supposed to push on this Navigator. There should be something wrong in the code."),
-              home: ThemedSystemOverlay(
-                child: PlatformMasterDetailApp(
-                  // Configure the page route behaviour of the whole app.
-                  onGenerateRoute: (settings) {
-                    final Function? pageContentBuilder =
+        MaterialColor manualPrimarySwatch =
+          context.select<SettingsProvider, MaterialColor>((settings) =>
+              generateMaterialColor(color: Color(settings.primarySwatch)));
+
+        final bool followSystemPalette = context.select<SettingsProvider, bool>(
+            (settings) => settings.followSystemPalette
+        );
+        bool isPlatformCupertino = PlatformX.isCupertino(context);
+
+        return DynamicColorBuilder(
+          builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+            // Determine if dynamic colors should be used
+            bool useSystemPalette = PlatformX.isAndroid && followSystemPalette;
+            
+            ThemeData lightThemeConfig;
+            ThemeData darkThemeConfig;
+            
+            MaterialColor lightThemeSwatch;
+            MaterialColor darkThemeSwatch;
+
+            if (useSystemPalette && lightDynamic != null && darkDynamic != null) {
+
+              lightThemeSwatch = generateMaterialColor(color: lightDynamic.primary);
+              darkThemeSwatch = generateMaterialColor(color: darkDynamic.primary);
+            } else {
+              lightThemeSwatch = manualPrimarySwatch;
+              darkThemeSwatch = manualPrimarySwatch;
+            }
+
+            lightThemeConfig = Constant.lightTheme(isPlatformCupertino, lightThemeSwatch);
+            darkThemeConfig = Constant.darkTheme(isPlatformCupertino, darkThemeSwatch);
+
+            return DynamicThemeController(
+              lightTheme: lightThemeConfig,
+              darkTheme: darkThemeConfig,
+              child: Material(
+                child: PlatformApp(
+                  // Remember? We have just defined this scroll behavior class above
+                  // to enable scrolling with mouse & stylus.
+                  scrollBehavior: TouchMouseScrollBehavior(),
+                  debugShowCheckedModeBanner: false,
+                  // Fix cupertino UI text color issue by override text color
+                  cupertino: (context, _) => CupertinoAppData(
+                      theme: CupertinoThemeData(
+                          brightness: context
+                              .select<SettingsProvider, ThemeType>(
+                                  (s) => s.themeType)
+                              .getBrightness(),
+                          textTheme: CupertinoTextThemeData(
+                              textStyle: TextStyle(
+                                  color: (Theme.of(context).brightness == Brightness.dark // Use current theme brightness
+                                      ? Colors.white
+                                      : Colors.black)
+                              )))),
+                  material: (context, _) => MaterialAppData(
+                    // Pass the ThemeData determined by DynamicThemeController
+                    theme: Theme.of(context),
+                  ),
+                  // Configure i18n delegates.
+                  localizationsDelegates: const [
+                    // [S] is a generated class that contains all the strings in the
+                    // app for l10n.
+                    S.delegate,
+                    GlobalMaterialLocalizations.delegate,
+                    GlobalWidgetsLocalizations.delegate,
+                    GlobalCupertinoLocalizations.delegate
+                  ],
+                  locale: LanguageManager.toLocale(
+                      context.watch<SettingsProvider>().language),
+                  // Configure supported locales. Hard-code "zh-CN" locale for correct Chinese font selection on Windows.
+                  // See https://github.com/flutter/flutter/issues/103811#issuecomment-1199012026 for details.
+                  supportedLocales: [...S.delegate.supportedLocales, const Locale('zh', 'CN')],
+                  onUnknownRoute: (settings) => throw AssertionError(
+                      "ERROR: onUnknownRoute() has been called inside the root navigator.\nDevelopers are not supposed to push on this Navigator. There should be something wrong in the code."),
+                  home: ThemedSystemOverlay(
+                    child: PlatformMasterDetailApp(
+                      // Configure the page route behaviour of the whole app.
+                      onGenerateRoute: (settings) {
+                        final Function? pageContentBuilder =
                         DanxiApp.routes[settings.name!];
-                    if (pageContentBuilder != null) {
-                      return platformPageRoute(
-                          context: context,
-                          builder: (context) => pageContentBuilder(context,
-                              arguments: settings.arguments));
-                    }
-                    return null;
-                  },
-                  navigatorKey: navigatorKey,
+                        if (pageContentBuilder != null) {
+                          return platformPageRoute(
+                              context: context,
+                              builder: (context) => pageContentBuilder(context,
+                                  arguments: settings.arguments));
+                        }
+                        return null;
+                      },
+                      navigatorKey: navigatorKey,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -332,23 +352,21 @@ class DanxiApp extends StatelessWidget {
     // Init FDUHoleProvider. This object provides some global states about
     // FDUHole such as the current division and the json web token.
     var fduHoleProvider = ForumProvider();
-    // Init ForumRepository with the provider. This is the api implementations of the forum. 
+    // Init ForumRepository with the provider. This is the api implementations of the forum.
     ForumProvider.init(fduHoleProvider);
 
     // Wrap the whole app with [Phoenix] to enable fast reload. When user
     // logouts the Fudan UIS account, the whole app will be reloaded.
     //
     // You can call FlutterApp.restartApp() to refresh the app.
-    return ProviderScope(
-      child: Phoenix(
-        // Wrap the app with a global state management provider. As the name
-        // suggests, it groups multiple providers.
-        child: MultiProvider(providers: [
-          ChangeNotifierProvider.value(value: SettingsProvider.getInstance()),
-          ChangeNotifierProvider(create: (_) => NotificationProvider()),
-          ChangeNotifierProvider.value(value: fduHoleProvider)
-        ], child: mainApp),
-      ),
+    return Phoenix(
+      // Wrap the app with a global state management provider. As the name
+      // suggests, it groups multiple providers.
+      child: MultiProvider(providers: [
+        ChangeNotifierProvider.value(value: SettingsProvider.getInstance()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider.value(value: fduHoleProvider)
+      ], child: mainApp),
     );
   }
 }

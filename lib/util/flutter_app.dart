@@ -1,4 +1,4 @@
-﻿/*
+/*
  *     Copyright (C) 2021  DanXi-Dev
  *
  *     This program is free software: you can redistribute it and/or modify
@@ -17,7 +17,7 @@
 
 import 'dart:io';
 
-import 'package:dan_xi/common/pubspec_compat.dart';
+import 'package:dan_xi/common/pubspec.yaml.g.dart';
 import 'package:dan_xi/provider/state_provider.dart';
 import 'package:dan_xi/repository/base_repository.dart';
 import 'package:dan_xi/repository/fdu/neo_login_tool.dart';
@@ -54,4 +54,3 @@ class FlutterApp {
   static String get versionName =>
       "${Pubspec.version.major}.${Pubspec.version.minor}.${Pubspec.version.patch}";
 }
-

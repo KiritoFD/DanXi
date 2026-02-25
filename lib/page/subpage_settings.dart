@@ -1,4 +1,4 @@
-﻿/*
+/*
  *     Copyright (C) 2021 DanXi-Dev
  *
  *     This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,7 @@
 import 'dart:io';
 
 import 'package:dan_xi/common/constant.dart';
-import 'package:dan_xi/common/pubspec_compat.dart';
+import 'package:dan_xi/common/pubspec.yaml.g.dart';
 import 'package:dan_xi/generated/l10n.dart';
 import 'package:dan_xi/model/forum/user.dart';
 import 'package:dan_xi/model/person.dart';
@@ -1086,7 +1086,7 @@ class SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  static const String CLEAN_MODE_EXAMPLE = '`宸笉澶氬緱浜嗮煒咃紝鑷繁涓嶄細鍘荤湅鐪嬪悧馃槆`';
+  static const String CLEAN_MODE_EXAMPLE = '`差不多得了😅，自己不会去看看吗😇`';
 
   Future _showCleanModeGuideDialog() => showPlatformDialog(
       context: context,
@@ -1497,4 +1497,3 @@ class OTNotificationSettingsTile extends StatelessWidget {
     }
   }
 }
-

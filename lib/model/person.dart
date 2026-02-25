@@ -67,17 +67,17 @@ class PersonInfo {
   static bool verifySharedPreferences(XSharedPreferences preferences) {
     return preferences.containsKey("id") &&
         preferences.containsKey("password") &&
+        preferences.containsKey("name") &&
         preferences.getString("id") != null &&
-        preferences.getString("password") != null;
+        preferences.getString("password") != null &&
+        preferences.getString("name") != null;
   }
 
   factory PersonInfo.fromSharedPreferences(XSharedPreferences preferences) {
-    final id = preferences.getString("id");
-    final name = preferences.getString("name");
     return PersonInfo(
-        id,
+        preferences.getString("id"),
         preferences.getString("password"),
-        (name?.trim().isNotEmpty ?? false) ? name : id,
+        preferences.getString("name"),
         preferences.containsKey("user_group")
             ? UserGroup.values.firstWhere(
                 (element) =>
@@ -87,9 +87,9 @@ class PersonInfo {
   }
 
   Future<void> saveToSharedPreferences(XSharedPreferences preferences) async {
-    await preferences.setString("id", id);
-    await preferences.setString("password", password);
-    await preferences.setString("name", (name?.trim().isNotEmpty ?? false) ? name : id);
+    await preferences.setString("id", id!);
+    await preferences.setString("password", password!);
+    await preferences.setString("name", name!);
     await preferences.setString("user_group", group.toString());
   }
 

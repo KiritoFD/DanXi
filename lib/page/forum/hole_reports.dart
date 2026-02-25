@@ -1,4 +1,4 @@
-﻿/*
+/*
  *     Copyright (C) 2021  DanXi-Dev
  *
  *     This program is free software: you can redistribute it and/or modify
@@ -67,9 +67,9 @@ class BBSReportDetailState extends State<BBSReportDetail> {
   @override
   Widget build(BuildContext context) {
     return PlatformScaffold(
-        material: (_, __) =>
+        material: (_, _) =>
             MaterialScaffoldData(resizeToAvoidBottomInset: false),
-        cupertino: (_, __) =>
+        cupertino: (_, _) =>
             CupertinoPageScaffoldData(resizeToAvoidBottomInset: false),
         iosContentPadding: false,
         iosContentBottomPadding: false,
@@ -360,7 +360,7 @@ class AuditListState extends State<AuditList> {
         ),
         PlatformContextMenuItem(
           menuContext: menuContext,
-          child: const Text("鏍囪涓轰笉鏁忔劅"),
+          child: const Text("标记为不敏感"),
           onPressed: () async {
             int? result = await ForumRepository.getInstance()
                 .adminSetAuditFloor(e.id, false);
@@ -620,15 +620,15 @@ class _BanReporterDialog extends HookConsumerWidget {
       ),
       actions: [
         PlatformDialogAction(
-          cupertino: (_, __) =>
+          cupertino: (_, _) =>
               CupertinoDialogActionData(isDefaultAction: true),
           child: PlatformText(S.of(context).cancel),
           onPressed: () => Navigator.pop(context, null),
         ),
         PlatformDialogAction(
-          cupertino: (_, __) =>
+          cupertino: (_, _) =>
               CupertinoDialogActionData(isDestructiveAction: true),
-          material: (_, __) => MaterialDialogActionData(
+          material: (_, _) => MaterialDialogActionData(
               style: ButtonStyle(
                   foregroundColor:
                       WidgetStateProperty.all<Color>(Colors.red))),
@@ -640,4 +640,3 @@ class _BanReporterDialog extends HookConsumerWidget {
     );
   }
 }
-

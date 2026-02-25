@@ -1,4 +1,4 @@
-﻿/*
+/*
  *     Copyright (C) 2021  DanXi-Dev
  *
  *     This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@ import 'dart:convert';
 
 import 'package:app_links/app_links.dart';
 import 'package:dan_xi/common/constant.dart';
-import 'package:dan_xi/common/pubspec_compat.dart';
+import 'package:dan_xi/common/pubspec.yaml.g.dart';
 import 'package:dan_xi/generated/l10n.dart';
 import 'package:dan_xi/model/announcement.dart';
 import 'package:dan_xi/model/forum/hole.dart';
@@ -914,4 +914,3 @@ class HomePageState extends State<HomePage> with WidgetsBindingObserver {
         AnnouncementRepository.getInstance().getCelebrations() ?? [];
   }
 }
-

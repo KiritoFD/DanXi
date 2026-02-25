@@ -1,4 +1,4 @@
-﻿/*
+/*
  *     Copyright (C) 2021  DanXi-Dev
  *
  *     This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
  */
 
 import 'package:beautiful_soup_dart/beautiful_soup.dart';
-import 'package:dan_xi/common/pubspec_compat.dart';
+import 'package:dan_xi/common/pubspec.yaml.g.dart';
 import 'package:dan_xi/model/announcement.dart';
 import 'package:dan_xi/model/celebration.dart';
 import 'package:dan_xi/model/remote_sticker.dart';
@@ -209,4 +209,3 @@ class UpdateInfo {
 
   bool isAfter(Version version) => Version.parse(latestVersion!) > version;
 }
-

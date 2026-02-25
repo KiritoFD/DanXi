@@ -20,8 +20,9 @@ import 'package:dan_xi/generated/l10n.dart';
 import 'package:dan_xi/model/person.dart';
 import 'package:dan_xi/repository/fdu/ecard_repository.dart';
 import 'package:dan_xi/repository/fdu/ehall_repository.dart';
-import 'package:dan_xi/repository/fdu/neo_login_tool.dart' as neo;
+import 'package:dan_xi/repository/fdu/uis_login_tool.dart';
 import 'package:dan_xi/util/browser_util.dart';
+import 'package:dan_xi/util/io/dio_utils.dart';
 import 'package:dan_xi/util/master_detail_view.dart';
 import 'package:dan_xi/util/noticing.dart';
 import 'package:dan_xi/util/platform_universal.dart';
@@ -194,7 +195,7 @@ class LoginDialog extends HookConsumerWidget {
     try {
       await _tryLogin(context, nameController.text, pwdController.text, group);
     } catch (error, stack) {
-      if (error is neo.CredentialsInvalidException) {
+      if (error is CredentialsInvalidException) {
         pwdController.text = "";
       }
       if (!context.mounted) return;
@@ -219,33 +220,38 @@ class LoginDialog extends HookConsumerWidget {
       case UserGroup.FUDAN_POSTGRADUATE_STUDENT:
       case UserGroup.FUDAN_UNDERGRADUATE_STUDENT:
         PersonInfo newInfo = PersonInfo.createNewInfo(id, password, group);
-        // Root fix: login success should be decided by auth result, not by profile parsing.
-        await _verifyUisCredentials(newInfo);
-
-        String resolvedName = id;
         try {
           final stuInfo =
-              await FudanEhallRepository.getInstance().getStudentInfo(newInfo);
-          if (stuInfo.name?.trim().isNotEmpty ?? false) {
-            resolvedName = stuInfo.name!.trim();
+          await FudanEhallRepository.getInstance().getStudentInfo(newInfo);
+          newInfo.name = stuInfo.name;
+          await newInfo.saveToSharedPreferences(sharedPreferences);
+          personInfo.value = newInfo;
+          progressDialog.dismiss(showAnim: false);
+          if (context.mounted) {
+            Navigator.of(context).pop();
           }
-        } catch (_) {}
-
-        if (resolvedName == id) {
+        } catch (primaryError, primaryStackTrace) {
+          if (primaryError is DioException) {
+            progressDialog.dismiss(showAnim: false);
+            rethrow;
+          }
           try {
-            final cardName = await CardRepository.getInstance().getName(newInfo);
-            if (cardName?.trim().isNotEmpty ?? false) {
-              resolvedName = cardName!.trim();
+            newInfo.name = await CardRepository.getInstance().getName(newInfo);
+            await newInfo.saveToSharedPreferences(sharedPreferences);
+            personInfo.value = newInfo;
+            progressDialog.dismiss(showAnim: false);
+            if (context.mounted) {
+              Navigator.of(context).pop();
             }
-          } catch (_) {}
-        }
-
-        newInfo.name = (resolvedName.trim().isNotEmpty) ? resolvedName : id;
-        await newInfo.saveToSharedPreferences(sharedPreferences);
-        personInfo.value = newInfo;
-        progressDialog.dismiss(showAnim: false);
-        if (context.mounted) {
-          Navigator.of(context).pop();
+          } catch (fallbackError, fallbackStackTrace) {
+            progressDialog.dismiss(showAnim: false);
+            throw FallbackLoginException(
+              primaryError: primaryError,
+              primaryStackTrace: primaryStackTrace,
+              fallbackError: fallbackError,
+              fallbackStackTrace: fallbackStackTrace,
+            );
+          }
         }
         break;
       case UserGroup.FUDAN_STAFF:
@@ -274,19 +280,5 @@ class LoginDialog extends HookConsumerWidget {
   static bool _isShown = false;
 
   static bool get dialogShown => _isShown;
-
-  Future<void> _verifyUisCredentials(PersonInfo info) async {
-    final options = RequestOptions(
-      method: "GET",
-      path: "https://ehall.fudan.edu.cn/",
-      responseType: ResponseType.plain,
-    );
-    await neo.FudanSession.request(
-      options,
-      (_) => true,
-      info: info,
-      type: neo.FudanLoginType.Neo,
-    );
-  }
 
 }

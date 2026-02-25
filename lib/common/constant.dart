@@ -1,4 +1,4 @@
-﻿/*
+/*
  *     Copyright (C) 2021  DanXi-Dev
  *
  *     This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@ import 'dart:io' show Platform;
 import 'dart:math';
 
 import 'package:dan_xi/common/feature_registers.dart';
-import 'package:dan_xi/common/pubspec_compat.dart';
+import 'package:dan_xi/common/pubspec.yaml.g.dart';
 import 'package:dan_xi/feature/base_feature.dart';
 import 'package:dan_xi/feature/feature_map.dart';
 import 'package:dan_xi/generated/l10n.dart';
@@ -54,7 +54,7 @@ class Constant {
   /// * [ListDelegate], which determines the page content per division.
   /// * [PostsType], which can represent a special division.
   /// * [OTDivision], whose name is what we compare with.
-  static const SPECIAL_DIVISION_FOR_CURRICULUM = "璇勬暀";
+  static const SPECIAL_DIVISION_FOR_CURRICULUM = "评教";
 
   /// The default user agent used by the app.
   ///
@@ -305,7 +305,7 @@ class Constant {
             S.of(context).hydrogenc_description),
       ];
 
-  /// Add a Chinese symbol(锟? at the end of [num].
+  /// Add a Chinese symbol(￥) at the end of [num].
   ///
   /// If [num] is empty, return an empty string.
   static String yuanSymbol(String? num) {
@@ -550,27 +550,27 @@ class Constant {
   [
     {
         "type": 1,
-        "date": "闄ゅ",
+        "date": "除夕",
         "celebrationWords": [
-            "涓囩墿杩庢槬閫佹畫鑵婏紝涓€骞寸粨灞€鍦ㄤ粖瀹点€傪煄?,
-            "榧撹姊呰姳娣讳竴閮紝浜旀洿娆㈢瑧鎷滄柊骞淬€傪煄?,
-            "鍐敖浠婂淇冿紝骞村紑鏄庢棩闀裤€傪煄?,
-            "鏄ラ鏉ヤ笉杩滐紝鍙湪灞嬩笢澶淬€?
+            "万物迎春送残腊，一年结局在今宵。🎇",
+            "鼓角梅花添一部，五更欢笑拜新年。🎇",
+            "冬尽今宵促，年开明日长。🎇",
+            "春风来不远，只在屋东头。"
         ]
     },
     {
         "type": 1,
-        "date": "鏄ヨ妭",
+        "date": "春节",
         "celebrationWords": [
-            "鐖嗙澹颁腑涓€宀侀櫎锛屾槬椋庨€佹殩鍏ュ睜鑻忋€傪煄?,
-            "涓嶉』杩庡悜涓滈儕鍘伙紝鏄ュ湪鍗冮棬涓囨埛涓€傪煄?,
-            "鏉剧鍚柊绉嬶紝杞╃獥鏈変綑娓呫€?
+            "爆竹声中一岁除，春风送暖入屠苏。🎆",
+            "不须迎向东郊去，春在千门万户中。🎆",
+            "松竹含新秋，轩窗有余清。"
         ]
     }
   ]
   ''';
 
-  static const WeekDays = ["鍛ㄤ竴", "鍛ㄤ簩", "鍛ㄤ笁", "鍛ㄥ洓", "鍛ㄤ簲", "鍛ㄥ叚", "鍛ㄦ棩"];
+  static const WeekDays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 }
 
 enum Language {
@@ -591,7 +591,7 @@ enum Campus {
 }
 
 extension CampusEx on Campus? {
-  static const _CAMPUS_NAME = ["閭兏", "鏋灄", "姹熸咕", "寮犳睙"];
+  static const _CAMPUS_NAME = ["邯郸", "枫林", "江湾", "张江"];
 
   /// Find the corresponding [Campus] from its Chinese name in [_CAMPUS_NAME].
   static Campus fromChineseName(String? name) {
@@ -695,4 +695,3 @@ class ConnectionFatalError extends ConnectionStatus {
   final StackTrace? stackTrace;
   const ConnectionFatalError(this.error, [this.stackTrace]);
 }
-

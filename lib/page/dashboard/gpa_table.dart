@@ -36,13 +36,9 @@ class GpaTablePage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // No need to use `useMemoized` for these calculations being light enough.
-    final fullGpaList =
-        (arguments!['gpalist'] as List<GpaListItem>).toList()
-          ..sort((a, b) {
-            final ra = int.tryParse(a.rank) ?? 0x7fffffff;
-            final rb = int.tryParse(b.rank) ?? 0x7fffffff;
-            return ra.compareTo(rb);
-          });
+    final fullGpaList = (arguments!['gpalist'] as List<GpaListItem>).sortedBy(
+      (gpa) => int.tryParse(gpa.rank) ?? 0x7fffffff,
+    );
     final userGpa = ExamList.getUserGpaItem(fullGpaList);
     final sameMajorGpaList = userGpa == null
         ? fullGpaList

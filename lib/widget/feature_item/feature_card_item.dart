@@ -1,4 +1,4 @@
-﻿/*
+/*
  *     Copyright (C) 2021  DanXi-Dev
  *
  *     This program is free software: you can redistribute it and/or modify
@@ -80,7 +80,7 @@ class FeatureCardItemState extends State<FeatureCardItem>
                       children: [
                         if (widget.feature.icon != null) ...[
                           PlatformWidget(
-                            cupertino: (_, __) => widget.feature.icon,
+                            cupertino: (_, _) => widget.feature.icon,
                             material: (context, _) => IconTheme(
                               data: IconThemeData(
                                 color: Theme.of(context).hintColor,
@@ -153,4 +153,3 @@ class FeatureCardItemState extends State<FeatureCardItem>
   @override
   void doUpdate() => refreshSelf();
 }
-

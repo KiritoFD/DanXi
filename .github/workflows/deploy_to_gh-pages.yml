@@ -24,12 +24,9 @@ jobs:
       - name: Generate Models
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Export App Version
-        run: echo "APP_VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}')" >> $GITHUB_ENV
-
       - name: Build
         run: |
-          flutter build web --release --optimization-level 4 --dart-define=APP_VERSION=${{ env.APP_VERSION }}
+          flutter build web --release --optimization-level 4
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4.2.5

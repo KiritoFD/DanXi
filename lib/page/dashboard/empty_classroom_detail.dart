@@ -1,4 +1,4 @@
-﻿/*
+/*
  *     Copyright (C) 2021  DanXi-Dev
  *
  *     This program is free software: you can redistribute it and/or modify
@@ -45,9 +45,7 @@ Future<List<RoomInfo>> buildingRoomInfo(Ref ref, String buildingName, DateTime d
 
 /// A list page showing usages of classrooms.
 class EmptyClassroomDetailPage extends HookConsumerWidget {
-  final Map<String, dynamic>? arguments;
-
-  const EmptyClassroomDetailPage({super.key, this.arguments});
+  const EmptyClassroomDetailPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -60,7 +58,7 @@ class EmptyClassroomDetailPage extends HookConsumerWidget {
       storedBuildingIndex = SettingsProvider.getInstance().lastECBuildingChoiceRepresentation = 0;
     }
     final selectBuildingIndex = useState<int>(storedBuildingIndex);
-    useValueChanged<int, void>(selectBuildingIndex.value, (_, __) {
+    useValueChanged<int, void>(selectBuildingIndex.value, (_, _) {
       // When building index changes, store it for next time use.
       SettingsProvider.getInstance().lastECBuildingChoiceRepresentation = selectBuildingIndex.value;
     });
@@ -134,7 +132,7 @@ class EmptyClassroomDetailPage extends HookConsumerWidget {
       ),
       // Use different widgets on iOS/Android: Tag/Tab.
       PlatformWidget(
-          material: (_, __) => TagContainer(
+          material: (_, _) => TagContainer(
               fillRandomColor: false,
               fixedColor: Theme.of(context).colorScheme.secondary,
               fontSize: 12,
@@ -151,7 +149,7 @@ class EmptyClassroomDetailPage extends HookConsumerWidget {
                 }
               },
               tagList: campusTagWidgets),
-          cupertino: (_, __) => CupertinoSlidingSegmentedControl<int>(
+          cupertino: (_, _) => CupertinoSlidingSegmentedControl<int>(
             onValueChanged: (int? value) {
               selectCampusIndex.value = value!;
               selectBuildingIndex.value = 0;
@@ -167,7 +165,7 @@ class EmptyClassroomDetailPage extends HookConsumerWidget {
         height: PlatformX.isMaterial(context) ? 0 : 12,
       ),
       PlatformWidget(
-          material: (_, __) => TagContainer(
+          material: (_, _) => TagContainer(
               fillRandomColor: false,
               fixedColor: Theme.of(context).colorScheme.secondary,
               fontSize: 16,
@@ -183,7 +181,7 @@ class EmptyClassroomDetailPage extends HookConsumerWidget {
                 }
               },
               tagList: buildingTagWidgets),
-          cupertino: (_, __) => CupertinoSlidingSegmentedControl<int>(
+          cupertino: (_, _) => CupertinoSlidingSegmentedControl<int>(
             onValueChanged: (int? value) {
               if (value! >= 0 && value != selectBuildingIndex.value) {
                 selectBuildingIndex.value = value;
@@ -195,7 +193,7 @@ class EmptyClassroomDetailPage extends HookConsumerWidget {
       const SizedBox(height: 12),
 
       PlatformWidget(
-        cupertino: (_, __) => Row(
+        cupertino: (_, _) => Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(S.of(context).current_date),
@@ -210,7 +208,7 @@ class EmptyClassroomDetailPage extends HookConsumerWidget {
             ),
           ],
         ),
-        material: (_, __) => _buildSlider(selectDate, sliderValue),
+        material: (_, _) => _buildSlider(selectDate, sliderValue),
       ),
 
       Container(
@@ -389,4 +387,3 @@ class EmptyClassroomDetailPage extends HookConsumerWidget {
     return list;
   }
 }
-

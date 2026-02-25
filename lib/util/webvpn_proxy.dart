@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:dan_xi/provider/settings_provider.dart';
-import 'package:dan_xi/provider/state_provider.dart';
 import 'package:dan_xi/repository/fdu/neo_login_tool.dart';
 import 'package:dan_xi/util/io/dio_utils.dart';
 import 'package:dio/dio.dart';
@@ -153,13 +152,6 @@ class WebVPNInterceptor extends Interceptor {
       return handler.resolve(proxiedResponse, true);
     } on DioException catch (e) {
       return handler.reject(e, true);
-    } catch (e) {
-      // Some bootstrap failures (e.g. missing UIS person info) may throw
-      // non-Dio exceptions and short-circuit in 0ms. Fall back to direct once.
-      debugPrint("WebVPN request failed before network I/O, fallback direct: $e");
-      options.path = options.extra[EXTRA_ORIGINAL_URL] as String? ?? options.path;
-      options.extra[EXTRA_ROUTE_TYPE] = "direct_fallback";
-      return handler.next(options);
     }
   }
 
@@ -167,24 +159,6 @@ class WebVPNInterceptor extends Interceptor {
   void onRequest(
       RequestOptions options, RequestInterceptorHandler handler) async {
     options.extra[EXTRA_ORIGINAL_URL] = options.path;
-
-    final translatedUrl = tryTranslateUrlToWebVPN(options.path);
-    if (translatedUrl == null) {
-      // This host is not supported by WebVPN translation. Keep it direct.
-      // Otherwise unrelated services (e.g. auth.fduhole.com) may be
-      // incorrectly coupled with UIS/WebVPN login state.
-      options.extra[EXTRA_ROUTE_TYPE] = "direct_no_webvpn_route";
-      return handler.next(options);
-    }
-
-    // WebVPN authentication depends on UIS person info.
-    // If UIS is not logged in yet, forcing WebVPN would fail before network I/O
-    // and short-circuit unrelated endpoints (e.g. Danta auth APIs).
-    if (StateProvider.personInfo.value == null) {
-      options.extra[EXTRA_ROUTE_TYPE] = "direct_without_uis";
-      return handler.next(options);
-    }
-
     // Try with direct connect if we haven't even tried
     if (_canConnectDirectly == null) {
       // The first request submits the job to evaluate if direct connection works and waits for result.

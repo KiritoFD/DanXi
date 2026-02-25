@@ -219,7 +219,7 @@ class DormElectricityModalSheet extends HookConsumerWidget {
                       final formattedDate =
                           parsedDate.apply(formatter.format) ?? "??/??";
                       return SideTitleWidget(
-                        axisSide: meta.axisSide,
+                        meta: meta,
                         child: Text(formattedDate,
                             style: const TextStyle(fontSize: 10)),
                       );
