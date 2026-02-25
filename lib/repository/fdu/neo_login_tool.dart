@@ -662,7 +662,7 @@ class AuthenticationV1FailedException implements Exception {}
 /// Several exceptions that can be thrown during authentication V2.
 class AuthenticationV2FailedException implements Exception {}
 
-class CaptchaNeededException implements AuthenticationV1FailedException, AuthenticationV2FailedException, uis.CaptchaNeededException {}
+class CaptchaNeededException implements AuthenticationV1FailedException, AuthenticationV2FailedException {}
 
 /// Thrown when the id.fudan.edu.cn authentication system requires enhanced
 /// authentication (2FA), e.g. SMS verification. The user must complete this

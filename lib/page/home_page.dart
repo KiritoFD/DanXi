@@ -564,7 +564,9 @@ class HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _captchaSubscription.bindOnlyInvalid(
         Constant.eventBus
             .on()
-            .where((e) => e is uis.CaptchaNeededException)
+            .where((e) =>
+                e is uis.CaptchaNeededException ||
+                e is neo.CaptchaNeededException)
             .listen((_) => _dealWithCaptchaNeededException()),
         hashCode);
     _credentialsInvalidSubscription.bindOnlyInvalid(
