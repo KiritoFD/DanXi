@@ -66,11 +66,20 @@ import 'package:flutter_fgbg/flutter_fgbg.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart' show ProviderScope;
 import 'package:material_color_generator/material_color_generator.dart';
 import 'package:provider/provider.dart';
 import 'package:xiao_mi_push_plugin/xiao_mi_push_plugin.dart';
 
 import 'common/constant.dart';
+
+bool _appStarted = false;
+
+void _startDanxiApp() {
+  if (_appStarted) return;
+  _appStarted = true;
+  runApp(const DanxiApp());
+}
 
 /// The main entry of the whole app.
 /// Do some initial work here.
@@ -103,19 +112,25 @@ void main() {
 
   // Init SettingsProvider. SettingsProvider is a singleton class that stores
   // all the settings of the app.
-  SettingsProvider.getInstance().init().then((_) {
-    SettingsProvider.getInstance().isTagSuggestionAvailable().then((value) {
-      SettingsProvider.getInstance().tagSuggestionAvailable = value;
-      final registerDeviceIdentity =
-          PlatformX.isAndroid ? DeviceIdentity.register() : Future.value();
-      registerDeviceIdentity.then((_) {
-        // This is the entrypoint of a simple Flutter app.
-        // runApp() is a function that takes a [Widget] and makes it the root
-        // of the widget tree.
-        runApp(const DanxiApp());
-      });
-    });
-  });
+  unawaited(() async {
+    try {
+      await SettingsProvider.getInstance().init().timeout(
+            const Duration(seconds: 10),
+          );
+      final tagAvailable = await SettingsProvider.getInstance()
+          .isTagSuggestionAvailable()
+          .timeout(const Duration(seconds: 5), onTimeout: () => false);
+      SettingsProvider.getInstance().tagSuggestionAvailable = tagAvailable;
+      if (PlatformX.isAndroid) {
+        await DeviceIdentity.register().timeout(const Duration(seconds: 5));
+      }
+    } catch (e) {
+      debugPrint('DanXi bootstrap failed: $e');
+    } finally {
+      // Ensure startup init failure won't block first frame.
+      _startDanxiApp();
+    }
+  }());
 
   // Init DesktopWindow on desktop environment.
   if (PlatformX.isDesktop) {
@@ -237,6 +252,11 @@ class DanxiApp extends StatelessWidget {
         MaterialColor primarySwatch =
             context.select<SettingsProvider, MaterialColor>((value) =>
                 generateMaterialColor(color: Color(value.primarySwatch)));
+        final themeType =
+            context.select<SettingsProvider, ThemeType>((s) => s.themeType);
+        final resolvedTheme = themeType.getBrightness() == Brightness.dark
+            ? Constant.darkTheme(PlatformX.isCupertino(context), primarySwatch)
+            : Constant.lightTheme(PlatformX.isCupertino(context), primarySwatch);
         return DynamicThemeController(
           lightTheme: Constant.lightTheme(
               PlatformX.isCupertino(context), primarySwatch),
@@ -251,18 +271,11 @@ class DanxiApp extends StatelessWidget {
               // Fix cupertino UI text color issue by override text color
               cupertino: (context, __) => CupertinoAppData(
                   theme: CupertinoThemeData(
-                      brightness: context
-                          .select<SettingsProvider, ThemeType>(
-                              (s) => s.themeType)
-                          .getBrightness(),
+                      brightness: themeType.getBrightness(),
                       textTheme: CupertinoTextThemeData(
                           textStyle: TextStyle(
-                              color: PlatformX.getTheme(context, primarySwatch)
-                                  .textTheme
-                                  .bodyLarge!
-                                  .color)))),
-              material: (context, __) => MaterialAppData(
-                  theme: PlatformX.getTheme(context, primarySwatch)),
+                              color: resolvedTheme.textTheme.bodyLarge!.color)))),
+              material: (context, __) => MaterialAppData(theme: resolvedTheme),
               // Configure i18n delegates.
               localizationsDelegates: const [
                 // [S] is a generated class that contains all the strings in the
@@ -326,14 +339,16 @@ class DanxiApp extends StatelessWidget {
     // logouts the Fudan UIS account, the whole app will be reloaded.
     //
     // You can call FlutterApp.restartApp() to refresh the app.
-    return Phoenix(
-      // Wrap the app with a global state management provider. As the name
-      // suggests, it groups multiple providers.
-      child: MultiProvider(providers: [
-        ChangeNotifierProvider.value(value: SettingsProvider.getInstance()),
-        ChangeNotifierProvider(create: (_) => NotificationProvider()),
-        ChangeNotifierProvider.value(value: fduHoleProvider)
-      ], child: mainApp),
+    return ProviderScope(
+      child: Phoenix(
+        // Wrap the app with a global state management provider. As the name
+        // suggests, it groups multiple providers.
+        child: MultiProvider(providers: [
+          ChangeNotifierProvider.value(value: SettingsProvider.getInstance()),
+          ChangeNotifierProvider(create: (_) => NotificationProvider()),
+          ChangeNotifierProvider.value(value: fduHoleProvider)
+        ], child: mainApp),
+      ),
     );
   }
 }

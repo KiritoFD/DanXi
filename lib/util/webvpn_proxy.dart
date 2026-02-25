@@ -1,10 +1,12 @@
-import 'package:dan_xi/model/person.dart';
+import 'dart:convert';
+
 import 'package:dan_xi/provider/settings_provider.dart';
-import 'package:dan_xi/repository/fdu/uis_login_tool.dart';
-import 'package:dan_xi/repository/cookie/independent_cookie_jar.dart';
-import 'package:dan_xi/repository/cookie/readonly_cookie_jar.dart';
+import 'package:dan_xi/provider/state_provider.dart';
+import 'package:dan_xi/repository/fdu/neo_login_tool.dart';
 import 'package:dan_xi/util/io/dio_utils.dart';
 import 'package:dio/dio.dart';
+import 'package:dio_redirect_interceptor/dio_redirect_interceptor.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 
 class WebvpnRequestException implements Exception {
@@ -19,124 +21,68 @@ class WebvpnRequestException implements Exception {
   }
 }
 
-class WebvpnProxy {
-  // These async session objects work like a mutex with `try_acquire`, which only allow one concurrent action and blocks all other requesters until the action completes
-  static Future<void>? loginSession;
-  static Future<bool>? tryDirectSession;
-
-  static bool isLoggedIn = false;
-  static bool? canConnectDirectly;
-
-  // Cookies related with webvpn
-  static final ReadonlyCookieJar webvpnCookieJar = ReadonlyCookieJar();
-
-  static const String DIRECT_CONNECT_TEST_URL = "https://danta.fudan.edu.cn";
-  
-  static const String WEBVPN_LOGIN_URL =
-      "https://uis.fudan.edu.cn/authserver/login?service=https%3A%2F%2Fwebvpn.fudan.edu.cn%2Flogin%3Fcas_login%3Dtrue";
-
+/// An interceptor that intercepts requests and routes them through WebVPN if needed.
+///
+/// # Order of interceptors
+/// This interceptor should be added BEFORE [RedirectInterceptor] but AFTER any other interceptors.
+class WebVPNInterceptor extends Interceptor {
   static final Map<String, String> _vpnPrefix = {
     "www.fduhole.com":
-        "https://webvpn.fudan.edu.cn/https/77726476706e69737468656265737421e7e056d221347d5871048ce29b5a2e",
+        "https://$WEBVPN_HOST/{scheme}/77726476706e69737468656265737421e7e056d221347d5871048ce29b5a2e",
     "auth.fduhole.com":
-        "https://webvpn.fudan.edu.cn/https/77726476706e69737468656265737421f1e2559469366c45760785a9d6562c38",
+        "https://$WEBVPN_HOST/{scheme}/77726476706e69737468656265737421f1e2559469366c45760785a9d6562c38",
     "danke.fduhole.com":
-        "https://webvpn.fudan.edu.cn/https/77726476706e69737468656265737421f4f64f97227e6e546b0086a09d1b203a73",
+        "https://$WEBVPN_HOST/{scheme}/77726476706e69737468656265737421f4f64f97227e6e546b0086a09d1b203a73",
     "forum.fduhole.com":
-        "https://webvpn.fudan.edu.cn/https/77726476706e69737468656265737421f6f853892a7e6e546b0086a09d1b203a46",
+        "https://$WEBVPN_HOST/{scheme}/77726476706e69737468656265737421f6f853892a7e6e546b0086a09d1b203a46",
     "image.fduhole.com":
-        "https://webvpn.fudan.edu.cn/https/77726476706e69737468656265737421f9fa409b227e6e546b0086a09d1b203ab8"
+        "https://$WEBVPN_HOST/{scheme}/77726476706e69737468656265737421f9fa409b227e6e546b0086a09d1b203ab8",
+    "yjsxk.fudan.edu.cn":
+        "https://$WEBVPN_HOST/{scheme}/77726476706e69737468656265737421e9fd52842c7e6e457a0987e29d51367bba7b",
+    "10.64.130.6":
+        "https://$WEBVPN_HOST/{scheme}/77726476706e69737468656265737421a1a70fca737e39032e46df",
   };
+  static const String DIRECT_CONNECT_TEST_URL = "https://forum.fduhole.com";
+  static const String EXTRA_ROUTE_TYPE = "webvpn_route_type";
+  static const String EXTRA_ORIGINAL_URL = "webvpn_original_url";
+  static const String WEBVPN_HOST = "webvpn.fudan.edu.cn";
+  static final Uri WEBVPN_LOGIN_URL =
+      Uri.parse("https://$WEBVPN_HOST/login?cas_login=true");
+  static const String WEBVPN_REDIRECTED_TO_LOGIN_PREFIX = "https://$WEBVPN_HOST/login";
 
-  static PersonInfo? _personInfo;
+  static Future<bool>? tryDirectSession;
+  static bool? _canConnectDirectly;
 
-  /// Keep track with the previous listener added so that it won't be lost
-  static VoidCallback? _prevListener;
-
-  static String getWebvpnUri(String uri) {
-    Uri? u = Uri.tryParse(uri);
+  /// Try to translate a URL to its WebVPN equivalent. Return `null` if the URL is not supported by WebVPN.
+  static String? tryTranslateUrlToWebVPN(String url) {
+    Uri? u = Uri.tryParse(url);
     if (u == null) {
-      return uri;
+      return null;
+    }
+
+    final uriScheme = u.scheme.isEmpty ? "http" : u.scheme;
+    if (uriScheme != "http" && uriScheme != "https") {
+      return null;
     }
 
     if (_vpnPrefix.containsKey(u.host)) {
-      String prefix = "https://${u.host}";
-      String proxiedUri = uri;
-      if (uri.startsWith(prefix)) {
-        proxiedUri = _vpnPrefix[u.host]! + uri.substring(prefix.length);
+      final vpnPrefix = _vpnPrefix[u.host]!;
+      final urlPrefix = "$uriScheme://${u.host}";
+      if (url.startsWith(urlPrefix)) {
+        final translatedUrl =
+            url.replaceFirst(urlPrefix, vpnPrefix.replaceFirst("{scheme}", uriScheme));
+        return translatedUrl;
+      } else {
+        return null;
       }
-
-      return proxiedUri;
     } else {
-      return uri;
-    }
-  }
-
-  // Check if we have logged in to WebVPN, returns false if we haven't
-  static bool checkResponse(Response<dynamic> response) {
-    // When 302 is raised when the method is `POST`, it means that we haven't logged in
-    if (response.requestOptions.method == "POST" &&
-        response.statusCode == 302 &&
-        response.headers['location'] != null &&
-        response.headers['location']!.isNotEmpty) {
-      return false;
-    }
-
-    if (response.realUri
-        .toString()
-        .startsWith("https://webvpn.fudan.edu.cn/login")) {
-      return false;
-    }
-
-    return true;
-  }
-
-  /// Bind WebVPN proxy to a person info so that it updates automatically when [personInfo] changes.
-  /// If you want to unbind, call this function with set [unbind] set to true.
-  static void bindPersonInfo(ValueNotifier<PersonInfo?> personInfo) async {
-    // Remove any previously added listener to avoid having more than one listener at a time
-    if (_prevListener != null) {
-      personInfo.removeListener(_prevListener!);
-    }
-
-    // Listener that enforces webvpn to re-login when UIS info changes
-    _prevListener = () {
-      isLoggedIn = false;
-      _personInfo = personInfo.value;
-    };
-
-    personInfo.addListener(_prevListener!);
-  }
-
-  static Future<void> loginWebvpn(Dio dio) async {
-    if (!isLoggedIn) {
-      // Another concurrent task is running
-      if (loginSession != null) {
-        await loginSession;
-        return;
-      }
-
-      debugPrint("Logging into WebVPN");
-
-      try {
-        // Temporary cookie jar
-        IndependentCookieJar workJar = IndependentCookieJar();
-        loginSession =
-            UISLoginTool.loginUIS(dio, WEBVPN_LOGIN_URL, workJar, _personInfo);
-        await loginSession;
-        // Clone from temp jar to our dedicated webvpn jar
-        webvpnCookieJar.cloneFrom(workJar);
-        isLoggedIn = true;
-      } finally {
-        loginSession = null;
-      }
-      // Any exception thrown won't be catched and will be propagated to widgets
+      return null;
     }
   }
 
   /// Check if we are able to connect to the service directly (without WebVPN).
   /// This method uses a low-timeout dio to reduce wait time.
-  static Future<bool> tryDirect<T>() async {
+  static Future<bool> tryDirect() async {
     final dioOptions = BaseOptions(
         receiveDataWhenStatusError: true,
         connectTimeout: const Duration(seconds: 1),
@@ -173,80 +119,108 @@ class WebvpnProxy {
     }
   }
 
-  /// Request with auto-fallback to WebVPN (if enabled in settings)
-  static Future<Response<T>> requestWithProxy<T>(
-      Dio dio, RequestOptions options) async {
+  /// Priorly validate the response to see if it indicates a successful request.
+  ///
+  /// Throws exception if the response is invalid.
+  Response<dynamic> validateResponse(Response<dynamic> response) {
+    if (response.realUri.toString().startsWith(WEBVPN_REDIRECTED_TO_LOGIN_PREFIX)) {
+      throw WebvpnRequestException(
+          "Request through WebVPN failed: not logged in");
+    }
+    if (response.requestOptions.responseType == ResponseType.json) {
+      if (response.data is! Map && response.data is! List) {
+        // If the response is not a JSON object or array, try to decode it
+        jsonDecode(response.data.toString());
+      }
+    }
+    return response;
+  }
+
+  /// Handle a request through WebVPN
+  Future<void> handleWebVPNRequest(
+      RequestOptions options, RequestInterceptorHandler handler) async {
+    final translatedUrl = tryTranslateUrlToWebVPN(options.path);
+    options.path = translatedUrl ?? options.path;
+    options.extra[EXTRA_ROUTE_TYPE] =
+        translatedUrl != null ? "webvpn_proxied" : "webvpn_direct";
+
+    try {
+      debugPrint(
+          "Requesting through WebVPN: ${options.method} ${options.path}");
+      final proxiedResponse = await FudanSession.request(
+          options, validateResponse,
+          manualLoginUrl: WEBVPN_LOGIN_URL);
+      return handler.resolve(proxiedResponse, true);
+    } on DioException catch (e) {
+      return handler.reject(e, true);
+    } catch (e) {
+      // Some bootstrap failures (e.g. missing UIS person info) may throw
+      // non-Dio exceptions and short-circuit in 0ms. Fall back to direct once.
+      debugPrint("WebVPN request failed before network I/O, fallback direct: $e");
+      options.path = options.extra[EXTRA_ORIGINAL_URL] as String? ?? options.path;
+      options.extra[EXTRA_ROUTE_TYPE] = "direct_fallback";
+      return handler.next(options);
+    }
+  }
+
+  @override
+  void onRequest(
+      RequestOptions options, RequestInterceptorHandler handler) async {
+    options.extra[EXTRA_ORIGINAL_URL] = options.path;
+
+    final translatedUrl = tryTranslateUrlToWebVPN(options.path);
+    if (translatedUrl == null) {
+      // This host is not supported by WebVPN translation. Keep it direct.
+      // Otherwise unrelated services (e.g. auth.fduhole.com) may be
+      // incorrectly coupled with UIS/WebVPN login state.
+      options.extra[EXTRA_ROUTE_TYPE] = "direct_no_webvpn_route";
+      return handler.next(options);
+    }
+
+    // WebVPN authentication depends on UIS person info.
+    // If UIS is not logged in yet, forcing WebVPN would fail before network I/O
+    // and short-circuit unrelated endpoints (e.g. Danta auth APIs).
+    if (StateProvider.personInfo.value == null) {
+      options.extra[EXTRA_ROUTE_TYPE] = "direct_without_uis";
+      return handler.next(options);
+    }
+
     // Try with direct connect if we haven't even tried
-    if (canConnectDirectly == null) {
+    if (_canConnectDirectly == null) {
       // The first request submits the job to evaluate if direct connection works and waits for result.
       // Other concurrent requests just simply wait for the result.
       tryDirectSession ??= tryDirect();
-      canConnectDirectly = await tryDirectSession!;
+      _canConnectDirectly = await tryDirectSession;
     }
 
-    // If we can connect through direct request, or webvpn is not enabled in settings, or UIS isn't logged in, we should try to request directly.
-    if (canConnectDirectly! ||
-        !SettingsProvider.getInstance().useWebvpn ||
-        _personInfo == null) {
-      try {
-        final response = await dio.fetch<T>(options);
-        return response;
-      } on DioException catch (e) {
-        // Connection timeout, may happen when we were connected to Fudan LAN when making the first request but later disconnected
-        if (e.type == DioExceptionType.connectionTimeout ||
-            e.type == DioExceptionType.connectionError) {
-          // Not allowed to use WebVPN, we have to rethrow
-          if (!SettingsProvider.getInstance().useWebvpn ||
-              _personInfo == null) {
-            rethrow;
-          }
-
-          canConnectDirectly = false;
-          debugPrint(
-              "Direct connection timeout, trying to connect through proxy: $e");
-        } else {
-          // Misc Internet error, just rethrow
-          rethrow;
-        }
-      } catch (e) {
-        // Misc error, just rethrow
-        debugPrint("Unknown problem when trying direct access: $e");
-        rethrow;
-      }
+    if (_canConnectDirectly! || !SettingsProvider.getInstance().useWebvpn) {
+      // If we can connect through direct request, or WebVPN is not enabled in settings, we should try to request directly.
+      options.extra[EXTRA_ROUTE_TYPE] = "direct";
+      return handler.next(options);
     }
 
     // Turn to the proxy
-    // Replace path with translated path
-    options.path = WebvpnProxy.getWebvpnUri(options.path);
+    await handleWebVPNRequest(options, handler);
+  }
 
-    // Protect `POST` against 302 exceptions
-    if (options.method == "POST") {
-      options.validateStatus = (status) {
-        return status != null && status < 400;
-      };
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    final isNotRouted = err.requestOptions.extra[EXTRA_ROUTE_TYPE] == "direct";
+    final isConnectionError = err.type == DioExceptionType.connectionTimeout ||
+        err.type == DioExceptionType.connectionError;
+    if (isNotRouted && isConnectionError) {
+      _canConnectDirectly = false;
+      // FIXME: should retry the request through WebVPN here. But [onError] cannot be async.
+      debugPrint(
+          "Direct connection timeout, trying to connect through proxy next time: $err");
     }
+    return handler.next(err);
+  }
+}
 
-    // Try logging in first, will return immediately if we've already logged in
-    await loginWebvpn(dio);
-
-    // First attempt
-    Response<T> response = await dio.fetch<T>(options);
-    if (checkResponse(response)) {
-      return response;
-    }
-
-    // Re-login
-    isLoggedIn = false;
-    await loginWebvpn(dio);
-
-    // Second attempt
-    response = await dio.fetch<T>(options);
-    if (checkResponse(response)) {
-      return response;
-    }
-
-    // All attempts failed
-    throw WebvpnRequestException(
-        "Request through WebVPN failed after two attempts to login and request");
+class WebvpnProxy {
+  static Future<Response<T>> requestWithProxy<T>(
+      Dio dio, RequestOptions options) async {
+    return await dio.fetch<T>(options);
   }
 }

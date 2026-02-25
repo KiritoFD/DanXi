@@ -1,0 +1,10 @@
+{
+  "app": {
+    "bundleName": "io.github.danxi_dev.dan_xi",
+    "vendor": "example",
+    "versionCode": 342,
+    "versionName": "1.4.5",
+    "icon": "$media:app_icon",
+    "label": "$string:app_name"
+  }
+}

@@ -4,24 +4,6 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
-def localProperties = new Properties()
-def localPropertiesFile = rootProject.file('local.properties')
-if (localPropertiesFile.exists()) {
-    localPropertiesFile.withReader('UTF-8') { reader ->
-        localProperties.load(reader)
-    }
-}
-
-def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
-if (flutterVersionCode == null) {
-    flutterVersionCode = '1'
-}
-
-def flutterVersionName = localProperties.getProperty('flutter.versionName')
-if (flutterVersionName == null) {
-    flutterVersionName = '1.0'
-}
-
 def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file('key.properties')
 if (keystorePropertiesFile.exists()) {
@@ -37,9 +19,9 @@ gradle.taskGraph.whenReady {
     }
 }
 android {
-    compileSdkVersion 34
+    compileSdkVersion 36
 
-    ndkVersion "28.0.12433566"
+    ndkVersion "29.0.14206865"
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
@@ -49,10 +31,10 @@ android {
     defaultConfig {
         applicationId "io.github.danxi_dev.dan_xi"
         namespace "io.github.danxi_dev.dan_xi"
-        minSdkVersion 21
-        targetSdkVersion 34
-        versionCode flutterVersionCode.toInteger()
-        versionName flutterVersionName
+        minSdkVersion flutter.minSdkVersion
+        targetSdk 36
+        versionCode flutter.versionCode
+        versionName flutter.versionName
     }
     signingConfigs {
         release {
@@ -64,11 +46,20 @@ android {
     }
     buildTypes {
         release {
-            // Signing with the debug keys for now, so `flutter run --release` works.
             minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             // Only used when building a released work.
-             signingConfig signingConfigs.release
+            signingConfig signingConfigs.release
+        }
+    }
+    packagingOptions {
+        jniLibs {
+            // Enabling the compression of the native libraries, which is disabled by default for performance reasons.
+            // The option name, `useLegacyPackaging`, is a bit misleading. It's actually about the compression of the native libraries.
+            // We weight the size of the APK file more than the little performance gain, so we enable it.
+            // See https://developer.android.com/guide/practices/page-sizes for more information.
+            useLegacyPackaging true
         }
     }
     lint {
@@ -82,6 +73,4 @@ flutter {
 
 dependencies {
     implementation 'com.google.android.material:material:1.12.0'
-    implementation 'com.google.errorprone:error_prone_annotations:2.36.0' // required by flutter_secure_storage
-    implementation 'com.github.spotbugs:spotbugs-annotations:4.8.6' // required by flutter_secure_storage for class javax.annotation.Nullable and javax.annotation.concurrent.GuardedBy
 }

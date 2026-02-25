@@ -35,11 +35,16 @@ class XSharedPreferences {
       "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
   final FlutterSecureStorage _keyStore;
-  late final EncryptedSharedPreferences _preferences;
+  EncryptedSharedPreferences? _preferences;
+  SharedPreferences? _plainPreferences;
+  bool _usePlainPreferences = false;
+  bool _useMemoryPreferences = false;
+  final Map<String, Object?> _memoryPreferences = <String, Object?>{};
 
-  XSharedPreferences._() : _keyStore = const FlutterSecureStorage(
-    wOptions: WindowsOptions(useBackwardCompatibility: true),
-  );
+  XSharedPreferences._()
+      : _keyStore = const FlutterSecureStorage(
+          wOptions: WindowsOptions(useBackwardCompatibility: true),
+        );
 
   static XSharedPreferences? _instance;
 
@@ -63,37 +68,50 @@ class XSharedPreferences {
   static Future<XSharedPreferences> getInstance() async {
     if (_instance == null) {
       _instance = XSharedPreferences._();
-      // initialize the key store if the key does not exist.
-      bool hasKey = await _instance!._keyStore.containsKey(key: KEY_CIPHER);
-      if (!hasKey) {
-        await _instance!._keyStore
-            .write(key: KEY_CIPHER, value: _generateKey());
-      }
-      String key = (await _instance!._keyStore.read(key: KEY_CIPHER))!;
-      // initialize the encrypted preferences.
-      await EncryptedSharedPreferences.initialize(key, encryptor: LegacyAESEncryptor());
-      _instance!._preferences = EncryptedSharedPreferences.getInstance();
-      // migrate the data from [SharedPreferences] to [EncryptedSharedPreferences]
-      // if the data has not been flagged as migrated.
-      if (_instance!.getBool(KEY_MIGRATED) != true) {
-        SharedPreferences sharedPreferences =
-            await SharedPreferences.getInstance();
-        for (String oldKey in sharedPreferences.getKeys()) {
-          dynamic value = sharedPreferences.get(oldKey);
-          if (value is String) {
-            await _instance!.setString(oldKey, value);
-          } else if (value is int) {
-            await _instance!.setInt(oldKey, value);
-          } else if (value is double) {
-            await _instance!.setDouble(oldKey, value);
-          } else if (value is bool) {
-            await _instance!.setBool(oldKey, value);
-          } else if (value is List<String>) {
-            await _instance!.setStringList(oldKey, value);
-          }
-          await sharedPreferences.remove(oldKey);
+      try {
+        // initialize the key store if the key does not exist.
+        bool hasKey = await _instance!._keyStore.containsKey(key: KEY_CIPHER);
+        if (!hasKey) {
+          await _instance!._keyStore
+              .write(key: KEY_CIPHER, value: _generateKey());
         }
-        await _instance!.setBool(KEY_MIGRATED, true);
+        String key = (await _instance!._keyStore.read(key: KEY_CIPHER))!;
+        // initialize the encrypted preferences.
+        await EncryptedSharedPreferences.initialize(key,
+            encryptor: LegacyAESEncryptor());
+        _instance!._preferences = EncryptedSharedPreferences.getInstance();
+        // migrate the data from [SharedPreferences] to [EncryptedSharedPreferences]
+        // if the data has not been flagged as migrated.
+        if (_instance!.getBool(KEY_MIGRATED) != true) {
+          SharedPreferences sharedPreferences =
+              await SharedPreferences.getInstance();
+          for (String oldKey in sharedPreferences.getKeys()) {
+            dynamic value = sharedPreferences.get(oldKey);
+            if (value is String) {
+              await _instance!.setString(oldKey, value);
+            } else if (value is int) {
+              await _instance!.setInt(oldKey, value);
+            } else if (value is double) {
+              await _instance!.setDouble(oldKey, value);
+            } else if (value is bool) {
+              await _instance!.setBool(oldKey, value);
+            } else if (value is List<String>) {
+              await _instance!.setStringList(oldKey, value);
+            }
+            await sharedPreferences.remove(oldKey);
+          }
+          await _instance!.setBool(KEY_MIGRATED, true);
+        }
+      } catch (_) {
+        // Some platforms may not support secure storage yet (e.g. early OHOS plugins).
+        // Fall back to plain SharedPreferences so app startup won't block forever.
+        try {
+          _instance!._usePlainPreferences = true;
+          _instance!._plainPreferences = await SharedPreferences.getInstance();
+        } catch (_) {
+          _instance!._usePlainPreferences = false;
+          _instance!._useMemoryPreferences = true;
+        }
       }
     }
     return _instance!;
@@ -102,7 +120,15 @@ class XSharedPreferences {
   // Proxy methods for [EncryptedSharedPreferences]
 
   Future<bool> clear() async {
-    bool success = await _preferences.clear();
+    bool success;
+    if (_useMemoryPreferences) {
+      _memoryPreferences.clear();
+      success = true;
+    } else if (_usePlainPreferences) {
+      success = await _plainPreferences!.clear();
+    } else {
+      success = await _preferences!.clear();
+    }
     if (success) {
       // mark the data as migrated after clearing. Or the data written after clearing will be re-migrated.
       await _instance!.setBool(KEY_MIGRATED, true);
@@ -110,32 +136,126 @@ class XSharedPreferences {
     return success;
   }
 
-  Future<bool> remove(String key) => _preferences.remove(key);
+  Future<bool> remove(String key) {
+    if (_useMemoryPreferences) {
+      _memoryPreferences.remove(key);
+      return Future.value(true);
+    }
+    return _usePlainPreferences
+        ? _plainPreferences!.remove(key)
+        : _preferences!.remove(key);
+  }
 
-  FutureOr<Set<String>> getKeys() => _preferences.getKeys();
+  FutureOr<Set<String>> getKeys() {
+    if (_useMemoryPreferences) return _memoryPreferences.keys.toSet();
+    return _usePlainPreferences
+        ? _plainPreferences!.getKeys()
+        : _preferences!.getKeys();
+  }
 
   Future<bool> setString(String dataKey, String? dataValue) =>
-      _preferences.setString(dataKey, dataValue);
+      _useMemoryPreferences
+          ? Future.value(() {
+              if (dataValue == null) {
+                _memoryPreferences.remove(dataKey);
+              } else {
+                _memoryPreferences[dataKey] = dataValue;
+              }
+              return true;
+            }())
+          :
+      _usePlainPreferences
+          ? (dataValue == null
+              ? _plainPreferences!.remove(dataKey)
+              : _plainPreferences!.setString(dataKey, dataValue))
+          : _preferences!.setString(dataKey, dataValue);
 
   Future<bool> setInt(String dataKey, int? dataValue) =>
-      _preferences.setInt(dataKey, dataValue);
+      _useMemoryPreferences
+          ? Future.value(() {
+              if (dataValue == null) {
+                _memoryPreferences.remove(dataKey);
+              } else {
+                _memoryPreferences[dataKey] = dataValue;
+              }
+              return true;
+            }())
+          :
+      _usePlainPreferences
+          ? (dataValue == null
+              ? _plainPreferences!.remove(dataKey)
+              : _plainPreferences!.setInt(dataKey, dataValue))
+          : _preferences!.setInt(dataKey, dataValue);
 
   Future<bool> setDouble(String dataKey, double? dataValue) =>
-      _preferences.setDouble(dataKey, dataValue);
+      _useMemoryPreferences
+          ? Future.value(() {
+              if (dataValue == null) {
+                _memoryPreferences.remove(dataKey);
+              } else {
+                _memoryPreferences[dataKey] = dataValue;
+              }
+              return true;
+            }())
+          :
+      _usePlainPreferences
+          ? (dataValue == null
+              ? _plainPreferences!.remove(dataKey)
+              : _plainPreferences!.setDouble(dataKey, dataValue))
+          : _preferences!.setDouble(dataKey, dataValue);
 
   Future<bool> setBool(String dataKey, bool? dataValue) =>
-      _preferences.setBoolean(dataKey, dataValue);
+      _useMemoryPreferences
+          ? Future.value(() {
+              if (dataValue == null) {
+                _memoryPreferences.remove(dataKey);
+              } else {
+                _memoryPreferences[dataKey] = dataValue;
+              }
+              return true;
+            }())
+          :
+      _usePlainPreferences
+          ? (dataValue == null
+              ? _plainPreferences!.remove(dataKey)
+              : _plainPreferences!.setBool(dataKey, dataValue))
+          : _preferences!.setBoolean(dataKey, dataValue);
 
   Future<bool> setStringList(String dataKey, List<String>? dataValue) =>
       setString(dataKey, jsonEncode(dataValue));
 
-  String? getString(String key) => _preferences.getString(key);
+  Future<bool> setIntList(String dataKey, List<int>? dataValue) =>
+      setString(dataKey, jsonEncode(dataValue));
 
-  int? getInt(String key) => _preferences.getInt(key);
+  String? getString(String key) => _usePlainPreferences
+      ? _plainPreferences!.getString(key)
+      : _useMemoryPreferences
+          ? _memoryPreferences[key] as String?
+          : _preferences!.getString(key);
 
-  double? getDouble(String key) => _preferences.getDouble(key);
+  int? getInt(String key) =>
+      _usePlainPreferences
+          ? _plainPreferences!.getInt(key)
+          : _useMemoryPreferences
+              ? _memoryPreferences[key] as int?
+              : _preferences!.getInt(key);
 
-  bool? getBool(String key) => _preferences.getBoolean(key);
+  double? getDouble(String key) => _usePlainPreferences
+      ? _plainPreferences!.getDouble(key)
+      : _useMemoryPreferences
+          ? _memoryPreferences[key] as double?
+          : _preferences!.getDouble(key);
+
+  bool? getBool(String key) => _usePlainPreferences
+      ? _plainPreferences!.getBool(key)
+      : _useMemoryPreferences
+          ? _memoryPreferences[key] as bool?
+          : _preferences!.getBoolean(key);
+
+  List<int>? getIntList(String key) {
+    String? value = getString(key);
+    return value == null ? null : jsonDecode(value).cast<int>();
+  }
 
   List<String>? getStringList(String key) {
     String? value = getString(key);
@@ -153,13 +273,12 @@ class XSharedPreferences {
   }
 }
 
-
 /// @w568w (2024-11-26):
 /// encrypt_shared_preferences quietly changed the default AES Encryptor to use SIC mode from CBC mode.
 /// This is obviously a breaking change, but it is mentioned nowhere in the changelog. Average noob developer.
 ///
 /// So this class is an implementation of the legacy AES Encryptor.
-class LegacyAESEncryptor extends IEncryptor{
+class LegacyAESEncryptor extends IEncryptor {
   @override
   String encrypt(String key, String plainText) {
     assert(key.length == 16);
@@ -178,6 +297,7 @@ class LegacyAESEncryptor extends IEncryptor{
     final encryptService = Encrypter(AES(cipherKey, mode: AESMode.cbc));
     final initVector = IV.fromUtf8(key);
 
-    return encryptService.decrypt(Encrypted.fromBase64(encryptedData), iv: initVector);
+    return encryptService.decrypt(Encrypted.fromBase64(encryptedData),
+        iv: initVector);
   }
 }

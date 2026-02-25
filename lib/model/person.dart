@@ -20,9 +20,6 @@ import 'package:dan_xi/util/shared_preferences.dart';
 import 'package:flutter/widgets.dart';
 
 enum UserGroup {
-  /// Not logged in
-  VISITOR,
-
   /// Log in as Fudan undergraduate student
   FUDAN_UNDERGRADUATE_STUDENT,
 
@@ -37,9 +34,8 @@ enum UserGroup {
 }
 
 Map<UserGroup, Function> kUserGroupDescription = {
-  UserGroup.VISITOR: (BuildContext context) => S.of(context).visitor,
   UserGroup.FUDAN_UNDERGRADUATE_STUDENT: (BuildContext context) =>
-      S.of(context).login_uis,
+      S.of(context).login_uis_dialog_title,
   UserGroup.FUDAN_POSTGRADUATE_STUDENT: (BuildContext context) =>
       S.of(context).fudan_postgraduate_student,
   UserGroup.FUDAN_STAFF: (BuildContext context) => S.of(context).fudan_staff,
@@ -71,17 +67,17 @@ class PersonInfo {
   static bool verifySharedPreferences(XSharedPreferences preferences) {
     return preferences.containsKey("id") &&
         preferences.containsKey("password") &&
-        preferences.containsKey("name") &&
         preferences.getString("id") != null &&
-        preferences.getString("password") != null &&
-        preferences.getString("name") != null;
+        preferences.getString("password") != null;
   }
 
   factory PersonInfo.fromSharedPreferences(XSharedPreferences preferences) {
+    final id = preferences.getString("id");
+    final name = preferences.getString("name");
     return PersonInfo(
-        preferences.getString("id"),
+        id,
         preferences.getString("password"),
-        preferences.getString("name"),
+        (name?.trim().isNotEmpty ?? false) ? name : id,
         preferences.containsKey("user_group")
             ? UserGroup.values.firstWhere(
                 (element) =>
@@ -91,9 +87,9 @@ class PersonInfo {
   }
 
   Future<void> saveToSharedPreferences(XSharedPreferences preferences) async {
-    await preferences.setString("id", id!);
-    await preferences.setString("password", password!);
-    await preferences.setString("name", name!);
+    await preferences.setString("id", id);
+    await preferences.setString("password", password);
+    await preferences.setString("name", (name?.trim().isNotEmpty ?? false) ? name : id);
     await preferences.setString("user_group", group.toString());
   }
 
