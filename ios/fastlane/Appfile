@@ -1,4 +1,4 @@
-app_identifier("io.github.danxi-dev.dan-xi") # The bundle identifier of your app
+﻿app_identifier("danxi.dev.hm") # The bundle identifier of your app
 apple_id("xingjian_zhao@hotmail.com") # Your Apple email address
 
 itc_team_id("123065304") # App Store Connect Team ID

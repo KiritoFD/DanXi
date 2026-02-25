@@ -1,10 +1,10 @@
-{
+﻿{
   "app": {
-    "bundleName": "io.github.danxi_dev.dan_xi",
+    "bundleName": "danxi.dev.hm",
     "vendor": "example",
     "versionCode": 1000000,
     "versionName": "1.0.0",
-    "icon": "$media:app_icon",
+    "icon": "$media:icon",
     "label": "$string:app_name"
   }
 }

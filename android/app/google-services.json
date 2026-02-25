@@ -1,4 +1,4 @@
-{
+﻿{
   "project_info": {
     "project_number": "859967910399",
     "project_id": "danxi-e765c",
@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:859967910399:android:ce65a6929f5eafbf5a37ca",
         "android_client_info": {
-          "package_name": "io.github.w568w.dan_xi"
+          "package_name": "danxi.dev.hm"
         }
       },
       "oauth_client": [
