@@ -5,7 +5,8 @@
   },
   "overrides": {
     "@ohos/flutter_ohos": "file:../har/danxi_flutter.har",
-    "@ohos/flutter_module": "file:../har/danxi_flutter_module.har"
+    "@ohos/flutter_module": "file:../har/danxi_flutter_module.har",
+    "screen_brightness_ohos": "file:../har/plugins/screen_brightness_ohos.har"
   },
   "devDependencies": {
     "@ohos/hypium": "1.0.25",
