@@ -73,11 +73,32 @@ android/app/.cxx
 /CLAUDE.md
 /.claude/*.local.*
 
-# HarmonyOS cache and local build artifacts
-ohos/.hvigor/
-ohos/.hvigor.bak/
-ohos/node_modules/
-ohos/oh_modules/
-ohos/entry/build/
-ohos/local.properties
-dist/official_pipeline/
+# OHOS build/cache/temp
+/.hvigor/
+/.hvigor.bak/
+/cache/
+/reports/
+/dist/
+/ohos/.hvigor/
+/ohos/.hvigor.bak/
+/ohos/cache/
+/ohos/reports/
+/ohos/node_modules/
+/ohos/oh_modules/
+/ohos/entry/build/
+/ohos/entry/oh_modules/
+/ohos/entry/src/main/resources/rawfile/flutter_assets/
+
+# Local dependency/vendor temp
+/third_party/_local/
+
+# Local debug dumps
+/bm_dump_latest.txt
+/bm_dump.txt
+/crash_full_hilog.txt
+/danxi_ohos_files.txt
+/harmony_ohos_files.txt
+
+# Local compare temp
+/.tmp_compare/
+/.tmp_*/

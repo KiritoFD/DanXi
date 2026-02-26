@@ -80,44 +80,6 @@ Future<void> main() async {
   // Ensure that the engine has bound itself to
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (PlatformX.isOhos) {
-    runApp(const _OhosBootProbeApp());
-  }
-
-  try {
-    await _initializeApp();
-  } catch (e, st) {
-    if (PlatformX.isOhos) {
-      _bootStage.value = 'Boot failed: $e\n${_shortStack(st)}';
-      return;
-    }
-    rethrow;
-  }
-
-  // This is the entrypoint of a simple Flutter app.
-  // runApp() is a function that takes a [Widget] and makes it the root
-  // of the widget tree.
-  runApp(riverpod.ProviderScope(child: const DanxiApp()));
-}
-
-final ValueNotifier<String> _bootStage = ValueNotifier<String>('Boot: start');
-
-String _shortStack(StackTrace st) {
-  final lines = st.toString().split('\n').where((line) => line.trim().isNotEmpty);
-  return lines.take(3).join('\n');
-}
-
-Future<T> _runBootStep<T>(String stage, FutureOr<T> Function() action) async {
-  _bootStage.value = 'Boot: $stage';
-  try {
-    return await Future<T>.sync(action);
-  } catch (e, st) {
-    _bootStage.value = 'Boot failed@$stage: $e\n${_shortStack(st)}';
-    rethrow;
-  }
-}
-
-Future<void> _initializeApp() async {
   // Init Mi push Service.
   if (PlatformX.isAndroid) {
     XiaoMiPushPlugin.init(
@@ -134,71 +96,33 @@ Future<void> _initializeApp() async {
   // A detailed example of a feature can be found in
   // `feature/dorm_electricity_feature.dart`. This file contains extensive
   // comments which would be helpful for you to get started.
-  await _runBootStep('register features', () {
-    FeatureMap.registerAllFeatures();
-  });
+  FeatureMap.registerAllFeatures();
 
   // Init ScreenProxy. It is a proxy class for [ScreenBrightness] to make it
   // work on all platforms.
   // We need to adjust the screen brightness when showing tht Fudan QR Code.
-  await _runBootStep('screen proxy init', () async {
-    unawaited(LazyFuture.pack(ScreenProxy.init()));
-  });
+  unawaited(LazyFuture.pack(ScreenProxy.init()));
 
   // Init SettingsProvider. SettingsProvider is a singleton class that stores
   // all the settings of the app.
-  await _runBootStep('settings init', () async {
-    await SettingsProvider.getInstance().init();
-  });
+  await SettingsProvider.getInstance().init();
 
   // Restore persisted session cookies before any network requests.
   // This must run after SettingsProvider.init() because it depends on
   // XSharedPreferences being initialized.
-  await _runBootStep('session init', () async {
-    await FudanSession.initSession();
-  });
+  await FudanSession.initSession();
 
-  await _runBootStep('tag suggestion', () async {
-    SettingsProvider.getInstance().tagSuggestionAvailable =
-        await SettingsProvider.getInstance().isTagSuggestionAvailable();
-  });
+  SettingsProvider.getInstance().tagSuggestionAvailable =
+      await SettingsProvider.getInstance().isTagSuggestionAvailable();
 
   if (PlatformX.isAndroid) {
-    await _runBootStep('device identity', () async {
-      await DeviceIdentity.register();
-    });
+    await DeviceIdentity.register();
   }
-  _bootStage.value = 'Boot: done';
-}
 
-class _OhosBootProbeApp extends StatelessWidget {
-  const _OhosBootProbeApp();
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        backgroundColor: Colors.black,
-        body: SafeArea(
-          child: Center(
-            child: ValueListenableBuilder<String>(
-              valueListenable: _bootStage,
-              builder: (_, value, __) => Text(
-                value,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  // This is the entrypoint of a simple Flutter app.
+  // runApp() is a function that takes a [Widget] and makes it the root
+  // of the widget tree.
+  runApp(riverpod.ProviderScope(child: const DanxiApp()));
 }
 
 class TouchMouseScrollBehavior extends MaterialScrollBehavior {

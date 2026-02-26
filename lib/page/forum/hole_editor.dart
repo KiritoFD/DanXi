@@ -377,7 +377,7 @@ class BBSEditorWidgetState extends State<BBSEditorWidget> {
                           (BuildContext context, WidgetRef ref, Widget? child) {
                         final stickers = ref.watch(availableStickersProvider);
                         return stickers.when(
-                          loading: () => Center(
+                          loading: () => const Center(
                             child: PlatformCircularProgressIndicator(),
                           ),
                           error: (error, stackTrace) => Center(

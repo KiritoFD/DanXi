@@ -1,4 +1,4 @@
-﻿// Application-level settings for the Runner target.
+// Application-level settings for the Runner target.
 //
 // This may be replaced with something auto-generated from metadata (e.g., pubspec.yaml) in the
 // future. If not, the values below would default to using the project name when this becomes a
@@ -8,7 +8,7 @@
 PRODUCT_NAME = dan_xi
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = danxi.dev.hm
+PRODUCT_BUNDLE_IDENTIFIER = io.github.w568w.danXi
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright 漏 2021 io.github.w568w. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2021 io.github.w568w. All rights reserved.

@@ -63,8 +63,7 @@ import 'package:provider/provider.dart';
 import 'package:pub_semver/pub_semver.dart';
 import 'package:quick_actions/quick_actions.dart';
 import 'package:receive_intent/receive_intent.dart' as ri;
-import 'package:no_screenshot/no_screenshot.dart';
-import 'package:no_screenshot/screenshot_snapshot.dart';
+import 'package:screen_capture_event/screen_capture_event.dart';
 import 'package:xiao_mi_push_plugin/entity/mi_push_command_message_entity.dart';
 import 'package:xiao_mi_push_plugin/entity/mi_push_message_entity.dart';
 import 'package:xiao_mi_push_plugin/xiao_mi_push_plugin.dart';
@@ -93,8 +92,8 @@ class HomePage extends StatefulWidget {
 }
 
 class HomePageState extends State<HomePage> with WidgetsBindingObserver {
-  final NoScreenshot _noScreenshot = NoScreenshot.instance;
-  StreamSubscription<ScreenshotSnapshot>? _screenshotSubscription;
+  final ScreenCaptureEvent? screenListener =
+      PlatformX.isMobile ? ScreenCaptureEvent() : null;
 
   /// Listener to the failure of logging in caused by different reasons.
   ///
@@ -163,9 +162,7 @@ class HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _enhancedAuthSubscription.cancel();
     _receivedIntentSubscription.cancel();
     _uniLinksSubscription.cancel();
-    _screenshotSubscription?.cancel();
-    _noScreenshot.stopScreenshotListening();
-    _noScreenshot.stopScreenRecordingListening();
+    screenListener?.dispose();
     super.dispose();
   }
 
@@ -697,20 +694,25 @@ class HomePageState extends State<HomePage> with WidgetsBindingObserver {
       });
     }
 
-    _screenshotSubscription =
-        _noScreenshot.screenshotStream.listen((snapshot) async {
-      if (snapshot.wasScreenshotTaken || snapshot.isScreenRecording) {
-        if (StateProvider.needScreenshotWarning &&
-            StateProvider.isForeground &&
-            !StateProvider.showingScreenshotWarning) {
-          StateProvider.showingScreenshotWarning = true;
-          await showScreenshotWarning(context);
-          StateProvider.showingScreenshotWarning = false;
-        }
+    screenListener?.addScreenRecordListener((recorded) async {
+      if (StateProvider.needScreenshotWarning &&
+          StateProvider.isForeground &&
+          !StateProvider.showingScreenshotWarning) {
+        StateProvider.showingScreenshotWarning = true;
+        await showScreenshotWarning(context);
+        StateProvider.showingScreenshotWarning = false;
       }
     });
-    _noScreenshot.startScreenshotListening();
-    _noScreenshot.startScreenRecordingListening();
+    screenListener?.addScreenShotListener((filePath) async {
+      if (StateProvider.needScreenshotWarning &&
+          StateProvider.isForeground &&
+          !StateProvider.showingScreenshotWarning) {
+        StateProvider.showingScreenshotWarning = true;
+        await showScreenshotWarning(context);
+        StateProvider.showingScreenshotWarning = false;
+      }
+    });
+    screenListener?.watch();
   }
 
   static dynamic showScreenshotWarning(BuildContext context) =>
@@ -727,13 +729,7 @@ class HomePageState extends State<HomePage> with WidgetsBindingObserver {
       TestLifeCycle.onStart(context);
     }
 
-    // Keep persisted login flag and actual credentials in sync.
-    final bool hasAnyCredential = StateProvider.personInfo.value != null ||
-        SettingsProvider.getInstance().forumToken != null;
-    final bool effectiveLoggedIn =
-        SettingsProvider.getInstance().isLoggedIn && hasAnyCredential;
-    SettingsProvider.getInstance().isLoggedIn = effectiveLoggedIn;
-    StateProvider.isLoggedIn.value = effectiveLoggedIn;
+    StateProvider.isLoggedIn.value = SettingsProvider.getInstance().isLoggedIn;
   }
 
   Widget _buildBody(Widget title) {

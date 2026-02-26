@@ -67,9 +67,9 @@ class BBSReportDetailState extends State<BBSReportDetail> {
   @override
   Widget build(BuildContext context) {
     return PlatformScaffold(
-        material: (context, platform) =>
+        material: (_, _) =>
             MaterialScaffoldData(resizeToAvoidBottomInset: false),
-        cupertino: (context, platform) =>
+        cupertino: (_, _) =>
             CupertinoPageScaffoldData(resizeToAvoidBottomInset: false),
         iosContentPadding: false,
         iosContentBottomPadding: false,
@@ -620,15 +620,15 @@ class _BanReporterDialog extends HookConsumerWidget {
       ),
       actions: [
         PlatformDialogAction(
-          cupertino: (context, platform) =>
+          cupertino: (_, _) =>
               CupertinoDialogActionData(isDefaultAction: true),
           child: PlatformText(S.of(context).cancel),
           onPressed: () => Navigator.pop(context, null),
         ),
         PlatformDialogAction(
-          cupertino: (context, platform) =>
+          cupertino: (_, _) =>
               CupertinoDialogActionData(isDestructiveAction: true),
-          material: (context, platform) => MaterialDialogActionData(
+          material: (_, _) => MaterialDialogActionData(
               style: ButtonStyle(
                   foregroundColor:
                       WidgetStateProperty.all<Color>(Colors.red))),

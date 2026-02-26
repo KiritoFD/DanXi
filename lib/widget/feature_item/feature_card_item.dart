@@ -80,7 +80,7 @@ class FeatureCardItemState extends State<FeatureCardItem>
                       children: [
                         if (widget.feature.icon != null) ...[
                           PlatformWidget(
-                            cupertino: (context, platform) => widget.feature.icon,
+                            cupertino: (_, _) => widget.feature.icon,
                             material: (context, _) => IconTheme(
                               data: IconThemeData(
                                 color: Theme.of(context).hintColor,

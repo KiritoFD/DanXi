@@ -1,4 +1,4 @@
-﻿<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Access to the Internet -->
@@ -12,10 +12,10 @@
         tools:targetApi="donut" />
     <!-- Receive push notifications -->
     <permission
-        android:name="danxi.dev.hm.permission.MIPUSH_RECEIVE"
+        android:name="io.github.danxi_dev.dan_xi.permission.MIPUSH_RECEIVE"
         android:protectionLevel="signature" />
 
-    <uses-permission android:name="danxi.dev.hm.permission.MIPUSH_RECEIVE" />
+    <uses-permission android:name="io.github.danxi_dev.dan_xi.permission.MIPUSH_RECEIVE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <queries>
@@ -34,7 +34,7 @@
         android:fullBackupContent="@xml/backup_rules"
         android:dataExtractionRules="@xml/data_extraction_rules">
         <activity
-            android:name="danxi.dev.hm.MainActivity"
+            android:name="io.github.w568w.dan_xi.MainActivity"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:exported="true"
             android:hardwareAccelerated="true"

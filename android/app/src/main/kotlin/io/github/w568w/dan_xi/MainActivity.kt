@@ -1,4 +1,4 @@
-﻿/*
+/*
  *     Copyright (C) 2021  DanXi-Dev
  *
  *     This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
  *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package danxi.dev.hm
+package io.github.w568w.dan_xi
 
 import io.flutter.embedding.android.FlutterActivity
 

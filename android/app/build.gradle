@@ -1,4 +1,4 @@
-﻿plugins {
+plugins {
     id "com.android.application"
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
@@ -29,8 +29,8 @@ android {
 
 
     defaultConfig {
-        applicationId "danxi.dev.hm"
-        namespace "danxi.dev.hm"
+        applicationId "io.github.danxi_dev.dan_xi"
+        namespace "io.github.danxi_dev.dan_xi"
         minSdkVersion flutter.minSdkVersion
         targetSdk 36
         versionCode flutter.versionCode

@@ -60,15 +60,8 @@ class Constant {
   ///
   /// Note that this is not the same as the user agent used by the WebView, or the
   /// forum's [Dio]. Those two are set by WebView and [ForumRepository].
-  static String get defaultUserAgent => PlatformX.isMobile
-      ? DEFAULT_USER_AGENT_MOBILE
-      : DEFAULT_USER_AGENT_DESKTOP;
-
-  static const String DEFAULT_USER_AGENT_DESKTOP =
+  static const String DEFAULT_USER_AGENT =
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36";
-
-  static const String DEFAULT_USER_AGENT_MOBILE =
-      "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Mobile Safari/537.36";
 
   static const String APPSTORE_APPID = '1568629997';
 
