@@ -1,0 +1,11 @@
+﻿dependency_overrides:
+  app_links: ^6.3.3
+  linkify: ^5.0.0
+  riverpod_lint:
+    path: tooling/riverpod_lint_stub
+  custom_lint:
+    path: tooling/custom_lint_stub
+  riverpod_generator:
+    path: tooling/riverpod_generator_stub
+  pubspec_generator:
+    path: tooling/pubspec_generator_stub

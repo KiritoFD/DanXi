@@ -1,0 +1,1 @@
+﻿library pubspec_generator;

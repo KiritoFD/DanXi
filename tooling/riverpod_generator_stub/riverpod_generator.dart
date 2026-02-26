@@ -1,0 +1,1 @@
+﻿library riverpod_generator;

@@ -1,0 +1,4 @@
+﻿name: riverpod_lint
+version: 3.1.0
+environment:
+  sdk: '>=3.8.0 <4.0.0'

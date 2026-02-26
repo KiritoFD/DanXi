@@ -1,0 +1,4 @@
+﻿name: riverpod_generator
+version: 4.0.1
+environment:
+  sdk: '>=3.8.0 <4.0.0'

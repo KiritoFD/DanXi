@@ -1,0 +1,40 @@
+{
+	"app": {
+		"bundleName": "com.example.module_build",
+		"debug": false,
+		"versionCode": 1000000,
+		"versionName": "1.0.0",
+		"minAPIVersion": 50100018,
+		"targetAPIVersion": 60002022,
+		"apiReleaseType": "Release",
+		"targetMinorAPIVersion": 0,
+		"targetPatchAPIVersion": 0,
+		"compileSdkVersion": "6.0.2.130",
+		"compileSdkType": "HarmonyOS",
+		"appEnvironments": [],
+		"bundleType": "app",
+		"buildMode": "release"
+	},
+	"module": {
+		"name": "flutter_module",
+		"type": "har",
+		"description": "flutter_module",
+		"mainElement": "",
+		"deviceTypes": [
+			"phone",
+			"tablet",
+			"2in1"
+		],
+		"installationFree": false,
+		"abilities": [],
+		"requestPermissions": [
+			{
+				"name": "ohos.permission.INTERNET"
+			}
+		],
+		"packageName": "@ohos/flutter_module",
+		"virtualMachine": "ark13.0.1.0",
+		"compileMode": "esmodule",
+		"dependencies": []
+	}
+}
