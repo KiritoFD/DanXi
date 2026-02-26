@@ -1,6 +1,7 @@
 param(
   [ValidateSet("debug", "release")]
-  [string]$BuildMode = "debug"
+  [string]$BuildMode = "debug",
+  [switch]$KeepTemp
 )
 
 $ErrorActionPreference = "Stop"
@@ -10,6 +11,7 @@ $overrideOhosPath = Join-Path $repoRoot "pubspec_overrides.ohos.yaml"
 $rootPubspecPath = Join-Path $repoRoot "pubspec.yaml"
 $tempModuleDir = Join-Path $repoRoot ".tmp_har_module"
 $harOutputDir = Join-Path $repoRoot "har"
+$pluginHarDir = Join-Path $harOutputDir "plugins"
 $engineHarDst = Join-Path $harOutputDir "danxi_flutter.har"
 $moduleHarDst = Join-Path $harOutputDir "danxi_flutter_module.har"
 
@@ -87,18 +89,38 @@ try {
   }
 
   New-Item -ItemType Directory -Path $harOutputDir -Force | Out-Null
+  New-Item -ItemType Directory -Path $pluginHarDir -Force | Out-Null
   Copy-Item $engineHarSrc $engineHarDst -Force
   Copy-Item $moduleHarSrc $moduleHarDst -Force
+
+  $pluginHarFiles = Get-ChildItem -Path $tempModuleDir -Filter "*.har" -File -Recurse |
+    Where-Object { $_.FullName -ne $engineHarSrc -and $_.FullName -ne $moduleHarSrc } |
+    Sort-Object Name -Unique
+  foreach ($pluginHar in $pluginHarFiles) {
+    Copy-Item $pluginHar.FullName (Join-Path $pluginHarDir $pluginHar.Name) -Force
+  }
 
   Write-Host "HAR build succeeded:"
   Write-Host "  $engineHarDst"
   Write-Host "  $moduleHarDst"
+  if ($pluginHarFiles.Count -gt 0) {
+    Write-Host "Plugin HARs:"
+    foreach ($pluginHar in $pluginHarFiles) {
+      $p = Join-Path $pluginHarDir $pluginHar.Name
+      Write-Host "  $p"
+    }
+    Write-Host "Suggested Harmony overrides entries:"
+    foreach ($pluginHar in $pluginHarFiles) {
+      $name = [System.IO.Path]::GetFileNameWithoutExtension($pluginHar.Name)
+      Write-Host "    `"$name`": `"file:../har/plugins/$($pluginHar.Name)`","
+    }
+  }
 }
 finally {
   if ((Get-Location).Path -eq $tempModuleDir) {
     Pop-Location
   }
-  if (Test-Path $tempModuleDir) {
+  if (-not $KeepTemp -and (Test-Path $tempModuleDir)) {
     Remove-Item -Recurse -Force $tempModuleDir
   }
   Pop-Location
