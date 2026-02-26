@@ -1,33 +1,53 @@
-import { FlutterPage, FlutterView } from '@ohos/flutter_ohos';
-import { ComFlutterEntry } from '../flutter/ComFlutterEntry';
+import { FlutterEntry, FlutterPage, FlutterView } from '@ohos/flutter_ohos';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+class RouteParams {
+  route: Object = '/home';
+  toRecord(): Record<string, Object> {
+    let record: Record<string, Object> = {};
+    record['route'] = this.route;
+    return record;
+  }
+}
 
 @Entry
 @Component
 struct Index {
-  private flutterEntry: ComFlutterEntry | null = null;
+  private flutterEntry: FlutterEntry | null = null;
   private flutterView?: FlutterView;
+  @State private flutterViewId: string = '';
 
   aboutToAppear() {
-    this.flutterEntry = new ComFlutterEntry(getContext(this), { 'route': '/home' });
-    this.flutterEntry.aboutToAppear();
-    this.flutterView = this.flutterEntry.getFlutterView();
+    this.flutterEntry = new FlutterEntry(getContext(this), new RouteParams().toRecord());
+    this.flutterEntry.aboutToAppear()
+    this.flutterView = this.flutterEntry.getFlutterView()
+    this.flutterViewId = this.flutterView.getId()
+    hilog.info(0x0000, 'Harmony', `Index aboutToAppear, flutterViewId=${this.flutterViewId}`)
   }
 
   aboutToDisappear() {
-    this.flutterEntry?.aboutToDisappear();
+    hilog.info(0x0000, 'Harmony', 'Index aboutToDisappear')
+    this.flutterEntry?.aboutToDisappear()
   }
 
   onPageShow() {
-    this.flutterEntry?.onPageShow();
+    hilog.info(0x0000, 'Harmony', 'Index onPageShow')
+    this.flutterEntry?.onPageShow()
   }
 
   onPageHide() {
-    this.flutterEntry?.onPageHide();
+    hilog.info(0x0000, 'Harmony', 'Index onPageHide')
+    this.flutterEntry?.onPageHide()
   }
 
   build() {
     Stack() {
-      FlutterPage({ viewId: this.flutterView?.getId() })
+      FlutterPage({ viewId: this.flutterViewId })
+      Text(`Harmony overlay, viewId=${this.flutterViewId}`)
+        .fontSize(12)
+        .fontColor(Color.Red)
+        .position({ x: 8, y: 8 })
     }
+    .width('100%')
+    .height('100%')
   }
 }
