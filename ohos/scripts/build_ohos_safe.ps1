@@ -4,7 +4,9 @@ param(
   [string]$ProjectRoot = "",
   [switch]$NoRestore,
   [switch]$SkipSdkRestore,
-  [switch]$UseOhosDependencyProfile = $true
+  [switch]$UseOhosDependencyProfile,
+  [switch]$RefreshDependencies,
+  [switch]$UseNoPub = $true
 )
 
 Set-StrictMode -Version Latest
@@ -139,7 +141,7 @@ Write-Step "Log file: $logFile"
 Push-Location $root
 $depProfileState = $null
 try {
-  if ($UseOhosDependencyProfile) {
+  if ($RefreshDependencies -and $UseOhosDependencyProfile) {
     $depProfileState = Activate-OhosDependencyProfile -ProjectRoot $root
     if ($depProfileState.Activated) {
       Write-Step "Activated OHOS dependency profile: $($depProfileState.ProfilePubspec)"
@@ -151,27 +153,34 @@ try {
   & flutter --version | Out-Host
   & node -v | Out-Host
   & npm -v | Out-Host
-  $pubTmpOut = Join-Path $logsDir "tmp_pubget_stdout_$timestamp.log"
-  $pubTmpErr = Join-Path $logsDir "tmp_pubget_stderr_$timestamp.log"
-  $pub = Start-Process -FilePath "cmd.exe" `
-    -ArgumentList "/c flutter pub get" `
-    -NoNewWindow `
-    -Wait `
-    -PassThru `
-    -RedirectStandardOutput $pubTmpOut `
-    -RedirectStandardError $pubTmpErr
-  if (Test-Path $pubTmpOut) { Get-Content $pubTmpOut | Tee-Object -FilePath $logFile -Append | Out-Host }
-  if (Test-Path $pubTmpErr) { Get-Content $pubTmpErr | Tee-Object -FilePath $logFile -Append | Out-Host }
-  Remove-Item -Force -ErrorAction SilentlyContinue $pubTmpOut, $pubTmpErr
-  if ($pub.ExitCode -ne 0) {
-    throw "flutter pub get failed."
+  if ($RefreshDependencies) {
+    Write-Step "Refreshing dependencies with flutter pub get ..."
+    $pubTmpOut = Join-Path $logsDir "tmp_pubget_stdout_$timestamp.log"
+    $pubTmpErr = Join-Path $logsDir "tmp_pubget_stderr_$timestamp.log"
+    $pub = Start-Process -FilePath "cmd.exe" `
+      -ArgumentList "/c flutter pub get" `
+      -NoNewWindow `
+      -Wait `
+      -PassThru `
+      -RedirectStandardOutput $pubTmpOut `
+      -RedirectStandardError $pubTmpErr
+    if (Test-Path $pubTmpOut) { Get-Content $pubTmpOut | Tee-Object -FilePath $logFile -Append | Out-Host }
+    if (Test-Path $pubTmpErr) { Get-Content $pubTmpErr | Tee-Object -FilePath $logFile -Append | Out-Host }
+    Remove-Item -Force -ErrorAction SilentlyContinue $pubTmpOut, $pubTmpErr
+    if ($pub.ExitCode -ne 0) {
+      throw "flutter pub get failed."
+    }
   }
 
-  Write-Step "Running flutter build hap --$Mode ..."
+  $buildArgs = "/c flutter build hap --$Mode"
+  if ($UseNoPub) {
+    $buildArgs += " --no-pub"
+  }
+  Write-Step "Running $buildArgs ..."
   $tmpOut = Join-Path $logsDir "tmp_stdout_$timestamp.log"
   $tmpErr = Join-Path $logsDir "tmp_stderr_$timestamp.log"
   $p = Start-Process -FilePath "cmd.exe" `
-    -ArgumentList "/c flutter build hap --$Mode" `
+    -ArgumentList $buildArgs `
     -NoNewWindow `
     -Wait `
     -PassThru `

@@ -8,7 +8,9 @@ param(
   [string]$FlutterSdkPath = "C:\Users\xy\flutter_flutter",
   [string]$FlutterSdkGitUrl = "https://gitcode.com/openharmony-tpc/flutter_flutter.git",
   [switch]$DeepCleanCaches = $true,
-  [switch]$UseOhosDependencyProfile = $true
+  [switch]$UseOhosDependencyProfile,
+  [switch]$RefreshDependencies,
+  [switch]$UseNoPub = $true
 )
 
 Set-StrictMode -Version Latest
@@ -270,7 +272,7 @@ Ensure-Dir $artifactsRoot
 
 $depProfileState = $null
 try {
-  if ($UseOhosDependencyProfile) {
+  if ($RefreshDependencies -and $UseOhosDependencyProfile) {
     $depProfileState = Activate-OhosDependencyProfile -ProjectRoot $root
     if ($depProfileState.Activated) {
       Write-Step "Activated OHOS dependency profile: $($depProfileState.ProfilePubspec)"
@@ -327,6 +329,9 @@ try {
 
   Write-Step "HAR stage: trying current project first..."
   $harArgs = "/c `"$flutterExe`" build har --$Mode"
+  if ($UseNoPub) {
+    $harArgs += " --no-pub"
+  }
   $harExit = Invoke-LoggedCommand -FilePath "cmd.exe" -Arguments $harArgs -WorkingDirectory $root -LogFile $harLog -EnvVars $commonEnv
 
   $harSourceDir = Join-Path $root ".ohos\har"
@@ -354,6 +359,9 @@ try {
 
   Write-Step "HAP stage: build hap independently..."
   $hapArgs = "/c `"$flutterExe`" build hap --$Mode"
+  if ($UseNoPub) {
+    $hapArgs += " --no-pub"
+  }
   $hapExit = Invoke-LoggedCommand -FilePath "cmd.exe" -Arguments $hapArgs -WorkingDirectory $root -LogFile $hapLog -EnvVars $commonEnv
 
   $hapFile = Find-HapOutput -ProjectRoot $root

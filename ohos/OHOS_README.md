@@ -11,24 +11,36 @@ This folder contains OHOS-specific build scripts and baseline files to reduce me
 
 ## 2. Script Location
 
+- Unified CI/local entry: `ohos/scripts/build_ohos_ci.ps1`
 - Safe single build: `ohos/scripts/build_ohos_safe.ps1`
 - Retry loop pipeline: `ohos/scripts/build_ohos_loop.ps1`
 
-Both scripts are moved from root `scripts/` to `ohos/scripts/` and now resolve project root from script location.
+All scripts are moved from root `scripts/` to `ohos/scripts/` and now resolve project root from script location.
 
 ## 3. Typical Usage
 
 Run from repository root:
 
 ```powershell
-.\ohos\scripts\build_ohos_safe.ps1 -Mode debug
-.\ohos\scripts\build_ohos_loop.ps1 -Mode debug -MaxAttempts 3
+.\ohos\scripts\build_ohos_ci.ps1 -Mode debug
 ```
+
+Behavior of CI entry script:
+
+- Stage 1: run `build_ohos_safe.ps1`
+- Stage 2: if stage 1 fails, run `build_ohos_loop.ps1` with retries
 
 Optional flags:
 
 - `-ProjectRoot <path>`: explicit repo root
 - `-Mode debug|release|profile`
+- `-RefreshDependencies`: run `flutter pub get` before build
+- `-UseOhosDependencyProfile`: only effective with `-RefreshDependencies`; temporarily uses `ohos/dependency_snapshots/pubspec.ohos.yaml`
+- `-UseNoPub:$false`: disable `--no-pub` if you need full dependency resolution
+- `build_ohos_ci.ps1`:
+  - `-MaxAttempts <n>`: retry limit for fallback loop stage
+  - `-RetryDelaySeconds <n>`
+  - `-SkipFallbackLoop`: fail fast if safe build fails
 - `build_ohos_loop.ps1`:
   - `-MaxAttempts <n>`
   - `-RetryDelaySeconds <n>`
@@ -53,10 +65,9 @@ These snapshots are copies of repo-root dependency files at the time OHOS script
 
 ## 6. OHOS-only Dependency Profile
 
-Both scripts enable OHOS dependency profile by default:
+OHOS dependency profile is opt-in:
 
-- `-UseOhosDependencyProfile:$true` (default): temporarily replace root `pubspec.yaml/lock` with `pubspec.ohos.*` for build.
-- `-UseOhosDependencyProfile:$true` (default): temporarily replace root `pubspec.yaml` with `pubspec.ohos.yaml` for build.
-- `-UseOhosDependencyProfile:$false`: use root dependencies directly.
+- `-RefreshDependencies -UseOhosDependencyProfile`: temporarily replace root `pubspec.yaml` with `pubspec.ohos.yaml` during dependency refresh.
+- Without `-RefreshDependencies`, scripts do not touch root `pubspec.yaml`.
 
 Scripts restore root `pubspec.yaml/lock` after build.
