@@ -7,7 +7,8 @@ param(
   [switch]$RecloneFlutterSdk,
   [string]$FlutterSdkPath = "C:\Users\xy\flutter_flutter",
   [string]$FlutterSdkGitUrl = "https://gitcode.com/openharmony-tpc/flutter_flutter.git",
-  [switch]$DeepCleanCaches = $true
+  [switch]$DeepCleanCaches = $true,
+  [switch]$UseOhosDependencyProfile = $true
 )
 
 Set-StrictMode -Version Latest
@@ -60,6 +61,53 @@ function Restore-TrackedPath {
   & git -C $RepoRoot checkout -- $TargetPath
   if ($LASTEXITCODE -ne 0) {
     throw "git checkout failed for '$TargetPath' in '$RepoRoot'"
+  }
+}
+
+function Activate-OhosDependencyProfile {
+  param([string]$ProjectRoot)
+  $profilePubspec = Join-Path $ProjectRoot "ohos\dependency_snapshots\pubspec.ohos.yaml"
+  $profileLock = Join-Path $ProjectRoot "ohos\dependency_snapshots\pubspec.ohos.lock"
+  $rootPubspec = Join-Path $ProjectRoot "pubspec.yaml"
+  $rootLock = Join-Path $ProjectRoot "pubspec.lock"
+  if (-not (Test-Path $profilePubspec)) {
+    return @{ Activated = $false }
+  }
+  $pubspecBackup = "$rootPubspec.ohosbak"
+  $lockBackup = "$rootLock.ohosbak"
+  Copy-Item -Force $rootPubspec $pubspecBackup
+  if (Test-Path $rootLock) {
+    Copy-Item -Force $rootLock $lockBackup
+  }
+  Copy-Item -Force $profilePubspec $rootPubspec
+  if (Test-Path $profileLock) {
+    Copy-Item -Force $profileLock $rootLock
+  }
+  return @{
+    Activated = $true
+    PubspecBackup = $pubspecBackup
+    LockBackup = $lockBackup
+    RootPubspec = $rootPubspec
+    RootLock = $rootLock
+    ProfilePubspec = $profilePubspec
+    ProfileLock = $profileLock
+  }
+}
+
+function Restore-OhosDependencyProfile {
+  param([hashtable]$State)
+  if (-not $State -or -not $State.Activated) {
+    return
+  }
+  if ($State.PubspecBackup -and (Test-Path $State.PubspecBackup)) {
+    Copy-Item -Force $State.PubspecBackup $State.RootPubspec
+    Remove-Item -Force $State.PubspecBackup -ErrorAction SilentlyContinue
+  }
+  if ($State.LockBackup -and (Test-Path $State.LockBackup)) {
+    Copy-Item -Force $State.LockBackup $State.RootLock
+    Remove-Item -Force $State.LockBackup -ErrorAction SilentlyContinue
+  } elseif ($State.RootLock -and (Test-Path $State.RootLock) -and -not (Test-Path $State.ProfileLock)) {
+    Remove-Item -Force $State.RootLock -ErrorAction SilentlyContinue
   }
 }
 
@@ -220,8 +268,24 @@ Ensure-Dir $logsDir
 Ensure-Dir $workspaceRoot
 Ensure-Dir $artifactsRoot
 
-$attempt = 0
-while ($true) {
+$depProfileState = $null
+try {
+  if ($UseOhosDependencyProfile) {
+    $depProfileState = Activate-OhosDependencyProfile -ProjectRoot $root
+    if ($depProfileState.Activated) {
+      Write-Step "Activated OHOS dependency profile: $($depProfileState.ProfilePubspec)"
+      $pubGetLog = Join-Path $logsDir "pubget_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+      $pubGetExit = Invoke-LoggedCommand -FilePath "cmd.exe" -Arguments "/c `"$flutterExe`" pub get" -WorkingDirectory $root -LogFile $pubGetLog -EnvVars $null
+      if ($pubGetExit -ne 0) {
+        throw "flutter pub get failed."
+      }
+    } else {
+      Write-Step "OHOS dependency profile not found, using root pubspec."
+    }
+  }
+
+  $attempt = 0
+  while ($true) {
   $attempt++
   if ($MaxAttempts -gt 0 -and $attempt -gt $MaxAttempts) {
     throw "Exceeded max attempts ($MaxAttempts) without producing a valid hap."
@@ -309,6 +373,9 @@ while ($true) {
   Restore-TrackedPath -RepoRoot $root -TargetPath "ohos"
   Restore-TrackedPath -RepoRoot $FlutterSdkPath -TargetPath $flutterHvigorRel
   Start-Sleep -Seconds $RetryDelaySeconds
+}
+} finally {
+  Restore-OhosDependencyProfile -State $depProfileState
 }
 
 Write-Step "Pipeline completed."

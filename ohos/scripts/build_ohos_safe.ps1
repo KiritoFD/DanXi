@@ -3,7 +3,8 @@ param(
   [string]$Mode = "debug",
   [string]$ProjectRoot = "",
   [switch]$NoRestore,
-  [switch]$SkipSdkRestore
+  [switch]$SkipSdkRestore,
+  [switch]$UseOhosDependencyProfile = $true
 )
 
 Set-StrictMode -Version Latest
@@ -52,6 +53,53 @@ function Restore-TrackedPath {
   }
 }
 
+function Activate-OhosDependencyProfile {
+  param([string]$ProjectRoot)
+  $profilePubspec = Join-Path $ProjectRoot "ohos\dependency_snapshots\pubspec.ohos.yaml"
+  $profileLock = Join-Path $ProjectRoot "ohos\dependency_snapshots\pubspec.ohos.lock"
+  $rootPubspec = Join-Path $ProjectRoot "pubspec.yaml"
+  $rootLock = Join-Path $ProjectRoot "pubspec.lock"
+  if (-not (Test-Path $profilePubspec)) {
+    return @{ Activated = $false }
+  }
+  $pubspecBackup = "$rootPubspec.ohosbak"
+  $lockBackup = "$rootLock.ohosbak"
+  Copy-Item -Force $rootPubspec $pubspecBackup
+  if (Test-Path $rootLock) {
+    Copy-Item -Force $rootLock $lockBackup
+  }
+  Copy-Item -Force $profilePubspec $rootPubspec
+  if (Test-Path $profileLock) {
+    Copy-Item -Force $profileLock $rootLock
+  }
+  return @{
+    Activated = $true
+    PubspecBackup = $pubspecBackup
+    LockBackup = $lockBackup
+    RootPubspec = $rootPubspec
+    RootLock = $rootLock
+    ProfilePubspec = $profilePubspec
+    ProfileLock = $profileLock
+  }
+}
+
+function Restore-OhosDependencyProfile {
+  param([hashtable]$State)
+  if (-not $State -or -not $State.Activated) {
+    return
+  }
+  if ($State.PubspecBackup -and (Test-Path $State.PubspecBackup)) {
+    Copy-Item -Force $State.PubspecBackup $State.RootPubspec
+    Remove-Item -Force $State.PubspecBackup -ErrorAction SilentlyContinue
+  }
+  if ($State.LockBackup -and (Test-Path $State.LockBackup)) {
+    Copy-Item -Force $State.LockBackup $State.RootLock
+    Remove-Item -Force $State.LockBackup -ErrorAction SilentlyContinue
+  } elseif ($State.RootLock -and (Test-Path $State.RootLock) -and -not (Test-Path $State.ProfileLock)) {
+    Remove-Item -Force $State.RootLock -ErrorAction SilentlyContinue
+  }
+}
+
 $root = Resolve-ProjectRoot -InputRoot $ProjectRoot
 $ohosDir = Join-Path $root "ohos"
 if (-not (Test-Path $ohosDir)) {
@@ -89,10 +137,35 @@ Write-Step "Build mode: $Mode"
 Write-Step "Log file: $logFile"
 
 Push-Location $root
+$depProfileState = $null
 try {
+  if ($UseOhosDependencyProfile) {
+    $depProfileState = Activate-OhosDependencyProfile -ProjectRoot $root
+    if ($depProfileState.Activated) {
+      Write-Step "Activated OHOS dependency profile: $($depProfileState.ProfilePubspec)"
+    } else {
+      Write-Step "OHOS dependency profile not found, using root pubspec."
+    }
+  }
+
   & flutter --version | Out-Host
   & node -v | Out-Host
   & npm -v | Out-Host
+  $pubTmpOut = Join-Path $logsDir "tmp_pubget_stdout_$timestamp.log"
+  $pubTmpErr = Join-Path $logsDir "tmp_pubget_stderr_$timestamp.log"
+  $pub = Start-Process -FilePath "cmd.exe" `
+    -ArgumentList "/c flutter pub get" `
+    -NoNewWindow `
+    -Wait `
+    -PassThru `
+    -RedirectStandardOutput $pubTmpOut `
+    -RedirectStandardError $pubTmpErr
+  if (Test-Path $pubTmpOut) { Get-Content $pubTmpOut | Tee-Object -FilePath $logFile -Append | Out-Host }
+  if (Test-Path $pubTmpErr) { Get-Content $pubTmpErr | Tee-Object -FilePath $logFile -Append | Out-Host }
+  Remove-Item -Force -ErrorAction SilentlyContinue $pubTmpOut, $pubTmpErr
+  if ($pub.ExitCode -ne 0) {
+    throw "flutter pub get failed."
+  }
 
   Write-Step "Running flutter build hap --$Mode ..."
   $tmpOut = Join-Path $logsDir "tmp_stdout_$timestamp.log"
@@ -109,6 +182,7 @@ try {
   Remove-Item -Force -ErrorAction SilentlyContinue $tmpOut, $tmpErr
   $buildCode = $p.ExitCode
 } finally {
+  Restore-OhosDependencyProfile -State $depProfileState
   Pop-Location
 }
 

@@ -47,5 +47,16 @@ When upstream merges cause dependency/version conflicts, compare with snapshots 
 
 - `ohos/dependency_snapshots/pubspec.yaml`
 - `ohos/dependency_snapshots/pubspec.lock`
+- `ohos/dependency_snapshots/pubspec.ohos.yaml` (OHOS-only dependency profile)
 
 These snapshots are copies of repo-root dependency files at the time OHOS scripts were organized.
+
+## 6. OHOS-only Dependency Profile
+
+Both scripts enable OHOS dependency profile by default:
+
+- `-UseOhosDependencyProfile:$true` (default): temporarily replace root `pubspec.yaml/lock` with `pubspec.ohos.*` for build.
+- `-UseOhosDependencyProfile:$true` (default): temporarily replace root `pubspec.yaml` with `pubspec.ohos.yaml` for build.
+- `-UseOhosDependencyProfile:$false`: use root dependencies directly.
+
+Scripts restore root `pubspec.yaml/lock` after build.
