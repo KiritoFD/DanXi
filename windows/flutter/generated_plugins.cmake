@@ -3,9 +3,18 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  app_links
+  desktop_window
   dynamic_color
-  platform_device_id_windows
+  file_selector_windows
+  flutter_inappwebview_windows
+  flutter_secure_storage_windows
+  gal
+  no_screenshot
+  permission_handler_windows
   screen_brightness_windows
+  share_plus
+  url_launcher_windows
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

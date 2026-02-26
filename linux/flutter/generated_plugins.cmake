@@ -3,9 +3,14 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  desktop_window
   dynamic_color
+  file_selector_linux
   flutter_secure_storage_linux
-  platform_device_id_linux
+  gtk
+  no_screenshot
+  open_file_linux
+  url_launcher_linux
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

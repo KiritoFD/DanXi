@@ -1,1 +1,4 @@
-// HAR integration mode does not require flutter-hvigor-plugin source injection.
+import path from 'path'
+import { injectNativeModules } from 'flutter-hvigor-plugin';
+
+injectNativeModules(__dirname, path.dirname(__dirname))

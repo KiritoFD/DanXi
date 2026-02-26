@@ -1,3 +1,4 @@
+
 {
   "name": "entry",
   "version": "1.0.0",
@@ -5,8 +6,6 @@
   "main": "",
   "author": "",
   "license": "",
-  "dependencies": {
-    "@ohos/flutter_ohos": "",
-    "@ohos/flutter_module": ""
-  }
+  "dependencies": {},
 }
+
