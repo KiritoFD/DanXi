@@ -72,3 +72,12 @@ android/app/.cxx
 # Claude Code
 /CLAUDE.md
 /.claude/*.local.*
+
+# HarmonyOS cache and local build artifacts
+ohos/.hvigor/
+ohos/.hvigor.bak/
+ohos/node_modules/
+ohos/oh_modules/
+ohos/entry/build/
+ohos/local.properties
+dist/official_pipeline/
